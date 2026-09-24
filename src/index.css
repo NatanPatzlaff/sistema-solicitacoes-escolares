@@ -1,0 +1,33 @@
+/* Tokens de specs/design.md — alterar lá primeiro. */
+:root {
+  --ouro: #b8892b;
+  --ouro-texto: #8a6516;
+  --amarelo: #f2c230;
+  --carmim: #a3192a;
+  --carmim-escuro: #7e1220;
+
+  --fundo: #f6f7f9;
+  --superficie: #fff;
+  --borda: #dde1e7;
+  --texto: #1e2530;
+  --texto-suave: #5b6472;
+  --desabilitado: #a4abb6;
+
+  font: 16px/1.5 'Public Sans', system-ui, sans-serif;
+  color: var(--texto);
+  background: var(--fundo);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+:focus-visible { outline: 2px solid var(--ouro-texto); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+.faixa {
+  height: 4px;
+  background: linear-gradient(to right, var(--ouro) 0 33.33%, var(--amarelo) 33.33% 66.66%, var(--carmim) 66.66%);
+}
