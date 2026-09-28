@@ -27,7 +27,7 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Todo usuário pertence a um perfil. Todo gestor está vinculado a **exatamente uma** unidade escolar.
 - O isolamento é garantido **no banco de dados** (regra por linha/unidade), não apenas na interface. Uma consulta de gestor nunca retorna dados de outra unidade, mesmo com a URL ou o ID alterados manualmente.
 - A unidade da solicitação vem do vínculo do gestor logado, nunca de um campo editável do formulário.
-- Autenticação: e-mail e senha, com contas criadas pela Secretaria. **(a confirmar)**
+- Autenticação: e-mail e senha, com contas criadas pela Secretaria. **(a confirmar)** Na primeira versão, as contas são criadas no painel do Supabase e vinculadas com `vincular_usuario()` (ver README.md).
 
 ## 4. Categorias
 

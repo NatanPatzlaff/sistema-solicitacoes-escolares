@@ -14,8 +14,12 @@
 
 ## Decisões provisórias (a confirmar)
 
-- Autenticação: e-mail e senha, contas criadas pela Secretaria.
-- Notificação: apenas aviso dentro do sistema na primeira versão.
+Já implementadas assim na primeira versão (2026-09-28); mudar é simples se forem recusadas:
+- Autenticação: e-mail e senha. Contas criadas no painel do Supabase e vinculadas por `vincular_usuario()` no SQL Editor (sem tela de gestão de contas).
+- Notificação: aviso dentro do sistema (contador no menu + linha destacada), some quando o gestor abre a solicitação.
+- Quem marca "Entregue": a Secretaria.
+- Gestor não edita nem cancela solicitações.
+- Justificativa obrigatória em "Indisponível" e "Não atendida"; quantidade adquirida obrigatória em "Adquirida".
 - Escopo da primeira versão conforme §11 de specs/sistema.md.
 
 ## Decisões rejeitadas
@@ -28,14 +32,21 @@
 
 - 2026-09-24 — Criação dos quatro arquivos de documentação.
 - 2026-09-24 — Stack definida; repositório privado criado no GitHub com a base do projeto (Vite + React + TS).
+- 2026-09-28 — Primeira versão do site: login/recuperação de senha, lista única para gestor e Secretaria (cards de status, filtros, busca sem acento, paginação 25), cadastro (gestor), detalhe com histórico e atendimento (Secretaria). Rotas por hash.
+- 2026-09-28 — Banco em `supabase/schema.sql`: RLS por unidade + triggers que forçam unidade do gestor, travam campos do pedido e aplicam o ciclo de status. Testes em `supabase/teste.sql`.
 
 ## Problemas encontrados
 
 - Plano gratuito do Supabase pausa o projeto após 7 dias sem uso e não oferece backup baixável.
+- 2026-09-28 — Função `vincular_usuario`: parâmetro `nome` conflitava com a coluna `nome` (ambiguidade PL/pgSQL). Pego pelo teste.
+- 2026-09-28 — Falha de rede ao carregar o perfil aparecia como "Conta sem perfil".
 
 ## Soluções aplicadas
 
 - Consulta diária + backup semanal via GitHub Actions (a implementar quando o projeto Supabase existir).
+- `#variable_conflict use_column` + parâmetros qualificados em `vincular_usuario`.
+- Tela própria de erro de conexão com "Tentar de novo".
+- Testes do banco rodam num PostgreSQL 17 portátil (em `%LOCALAPPDATA%\pgsql-portable`, sem instalação/serviço), recriado do zero a cada execução.
 
 ## Riscos conhecidos
 
@@ -54,7 +65,7 @@
 
 ## Próximos passos
 
-1. Criar o projeto no Supabase (gratuito) e guardar URL e chaves como secrets do GitHub.
-2. Criar os workflows de anti-pausa e backup.
+1. Criar o projeto no Supabase (gratuito), rodar `supabase/schema.sql` e criar as contas (passo a passo no README.md).
+2. Criar os workflows de anti-pausa e backup (precisam das chaves do Supabase).
 3. Conectar o repositório ao Cloudflare Pages.
-4. Responder às pendências e planejar a primeira entrega.
+4. Testar o fluxo completo com dados reais e responder às pendências.
