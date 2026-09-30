@@ -147,13 +147,12 @@ begin
   end;
   update itens set status = 'adquirida', quantidade_adquirida = 1,
     justificativa = 'Falta de verba.', previsao_entrega = '2026-10-10' where id = id_pa;
-  update itens set status = 'entregue' where id = id_pa;
   begin
-    update itens set status = 'em_analise' where id = id_pa;
-    assert false, 'estado final não volta';
+    update itens set status = 'entregue' where id = id_pa;
+    assert false, 'Secretaria não confirma entrega';
   exception when raise_exception then null;
   end;
-  assert (select count(*) from historico where item_id = id_pa) = 4, 'histórico com 4 status';
+  assert (select count(*) from historico where item_id = id_pa) = 3, 'histórico com 3 status';
   assert (select alterado_por_nome from historico where item_id = id_pa order by id desc limit 1) = 'Secretaria', 'nome no histórico';
   assert (select count(*) from novidades) = 0, 'Secretaria não vê avisos';
 end $$;
@@ -167,12 +166,12 @@ declare
 begin
   assert array_length(ids, 1) = 2, 'dois itens ainda cadastrados';
   assert atualizar_itens(ids, 'em_analise') = 2, 'lote: em análise';
-  -- lote com item que não pode mudar (Pá de lixo já entregue): nada é salvo
+  -- lote com item que não pode mudar (Grampeador ainda está "cadastrada"): nada é salvo
   begin
-    perform atualizar_itens(ids || (select id from itens where item = 'Pá de LIXO'), 'adquirida');
+    perform atualizar_itens(ids || (select id from itens where item = 'Grampeador'), 'adquirida');
     assert false, 'lote com item inválido deveria falhar';
   exception when raise_exception then
-    assert sqlerrm like 'Item "Pá de LIXO"%', 'erro diz qual item impediu: ' || sqlerrm;
+    assert sqlerrm like 'Item "Grampeador"%', 'erro diz qual item impediu: ' || sqlerrm;
   end;
   assert (select count(*) from itens where id = any(ids) and status = 'em_analise') = 2, 'tudo ou nada';
   -- adquirida sem quantidade: cada item recebe o que foi pedido, sem exigir justificativa
@@ -192,7 +191,8 @@ begin
   assert (select justificativa from itens where item = 'Grampeador') = 'Sem verba.', 'negativa com justificativa';
   assert (select count(*) from buscar_solicitacoes(p_status => 'nao_atendida')) = 1, 'filtro por status do item';
   assert (select count(*) from buscar_solicitacoes(p_item => 'PA DE lixo')) = 1, 'busca sem acento';
-  assert (select por_status ->> 'adquirida' from buscar_solicitacoes() where id = sid) = '2', 'resumo por status';
+  -- Pá de lixo (adquirida antes) + Projetor + Papel A4
+  assert (select por_status ->> 'adquirida' from buscar_solicitacoes() where id = sid) = '3', 'resumo por status';
 end $$;
 
 \echo '--- avisos (novidades)'
@@ -212,6 +212,23 @@ begin
   assert (select bool_or(novidade) from buscar_solicitacoes()), 'solicitação aparece como atualizada';
   delete from novidades;
   assert (select count(*) from novidades) = 0, 'A marcou como visto';
+
+  -- escola confirma o recebimento
+  begin
+    perform atualizar_itens(array(select id from itens where item = 'Projetor'), 'entregue');
+    assert (select status from itens where item = 'Projetor') = 'entregue', 'projetor adquirido pode ser confirmado';
+  end;
+  perform atualizar_itens(array(select id from itens where item = 'Pá de LIXO'), 'entregue', 999, 'mexi', '2030-01-01');
+  assert (select status::text || quantidade_adquirida || justificativa || previsao_entrega
+          from itens where item = 'Pá de LIXO') = 'entregue1Falta de verba.2026-10-10', 'gestor só muda o status';
+  assert (select alterado_por_nome from historico h join itens i on i.id = h.item_id
+          where i.item = 'Pá de LIXO' order by h.id desc limit 1) = 'Gestora A', 'histórico registra a escola';
+  assert (select count(*) from novidades) = 0, 'confirmação da escola não gera aviso para ela mesma';
+  begin
+    perform atualizar_itens(array(select id from itens where item = 'Pá de LIXO'), 'em_analise');
+    assert false, 'estado final não volta';
+  exception when raise_exception then null;
+  end;
   begin
     perform vincular_usuario('gestor.a@teste', 'X', 'secretaria', null);
     assert false, 'gestor não pode se promover';

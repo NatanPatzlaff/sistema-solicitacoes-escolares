@@ -6,8 +6,7 @@
 --
 -- Quantidades: número principal da lista; o texto original vai em "observações" quando
 -- tinha embalagem ("3 caixas", "5 de cada cor").
--- Ficaram de fora: itens sem quantidade ("--", "??????") e itens sem categoria que se
--- encaixe (utensílios de cozinha, mobiliário, equipamentos) — ver memoria.md, pendências.
+-- Ficaram de fora só os itens sem quantidade na lista original ("--", "??????").
 
 begin;
 
@@ -319,7 +318,40 @@ with lista (pedido, cat, item, qtd, obs) as (values
   ('G','MP','Tinta para tecido',1,'1 de cada cor'),
   ('G','MP','Tinta facial',2,'2 pacotes'),
   ('G','ME','Tinta para impressora Canon 7010',15,'15 de cada cor'),
-  ('G','MP','TNT',3,'1 laranja, 1 marrom, 1 lilás claro')
+  ('G','MP','TNT',3,'1 laranja, 1 marrom, 1 lilás claro'),
+
+  -- Itens que dependiam das categorias Cozinha e utensílios (CZ) e Mobiliário e equipamentos (MB)
+  ('E1','MB','Cadeira de rodinha (escritório)',5,null),
+  ('E1','MB','Caminha para sono',20,null),
+  ('E1','MB','Mesinha para ambientar as salas',2,null),
+  ('E1','MB','Tatame',1,'1 conjunto — repor os velhos'),
+  ('E1','MB','Tenda gazebo dobrável 3x3 m azul',2,'Com proteção UV e impermeável'),
+  ('E2','CZ','Amassador de batatas inox industrial (cabo grande)',1,null),
+  ('E2','CZ','Bacia com tampa G',5,null),
+  ('E2','CZ','Bacia com tampa M',5,null),
+  ('E2','MB','Caixa plástica empilhável 52 L preta (brinquedos)',10,null),
+  ('E2','CZ','Caixa plástica vazada 33 L preta (frutas)',12,null),
+  ('E2','CZ','Chaleira elétrica',5,null),
+  ('E2','CZ','Colher pequena',24,null),
+  ('E2','CZ','Colher pequena de bebê',24,null),
+  ('E2','CZ','Copo descartável pequeno',24,'24 fardos'),
+  ('E2','CZ','Faca de serrinha (adulto)',24,null),
+  ('E2','CZ','Garfo (adulto)',24,null),
+  ('E2','CZ','Guardanapo grande',500,'500 pacotes'),
+  ('E2','CZ','Isqueiro',5,null),
+  ('E2','CZ','Panela de pressão 20 L',1,null),
+  ('E2','CZ','Papel alumínio',10,'10 rolos'),
+  ('E2','CZ','Papel manteiga',10,'10 pacotes'),
+  ('E2','CZ','Pote retangular grande para frutas',5,null),
+  ('E2','CZ','Pote retangular médio para frutas',5,null),
+  ('E2','CZ','Pote plástico transparente com tampa G',5,null),
+  ('E2','CZ','Pote plástico transparente com tampa M',5,null),
+  ('E2','CZ','Prato fundo de vidro',48,null),
+  ('E2','CZ','Ralador (forte)',1,null),
+  ('E2','CZ','Térmica redonda 5 L com torneira (chá/suco)',1,'Para eventos — uma para cada escola'),
+  ('E2','CZ','Térmica para água ou café',2,null),
+  ('E2','CZ','Xícara transparente lisa',100,null),
+  ('G','MB','Relógio de parede',12,null)
 ),
 numerados as (
   select l.*, row_number() over () as n from lista l
@@ -331,6 +363,7 @@ dados as (
       when 'LH' then 'limpeza_higiene' when 'ME' then 'material_expediente'
       when 'MP' then 'material_escolar_pedagogico' when 'TE' then 'tecnologia'
       when 'MI' then 'manutencao_infraestrutura'
+      when 'CZ' then 'cozinha_utensilios' when 'MB' then 'mobiliario_equipamentos'
     end::categoria as categoria,
     case when pedido = 'G'
       -- lista recente: quase tudo ainda aguardando a Secretaria

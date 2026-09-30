@@ -13,6 +13,8 @@ export const CATEGORIAS = {
   material_escolar_pedagogico: 'Material escolar e pedagógico',
   tecnologia: 'Tecnologia',
   manutencao_infraestrutura: 'Manutenção e infraestrutura',
+  cozinha_utensilios: 'Cozinha e utensílios',
+  mobiliario_equipamentos: 'Mobiliário e equipamentos',
 } as const
 export type Categoria = keyof typeof CATEGORIAS
 
@@ -26,11 +28,12 @@ export const STATUS = {
 } as const
 export type Status = keyof typeof STATUS
 
-// Transições permitidas; o banco aplica a mesma regra.
-export const PROXIMOS: Record<Status, Status[]> = {
+// Transições que a Secretaria pode fazer; o banco aplica a mesma regra.
+// "Adquirida → Entregue" é só da escola (o gestor confirma o recebimento).
+export const PROXIMOS_SECRETARIA: Record<Status, Status[]> = {
   cadastrada: ['em_analise'],
   em_analise: ['adquirida', 'indisponivel', 'nao_atendida'],
-  adquirida: ['entregue'],
+  adquirida: [],
   entregue: [],
   indisponivel: [],
   nao_atendida: [],

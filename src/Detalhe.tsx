@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
-  FINAIS, PROXIMOS, STATUS, data, dataHora, dataSimples, mensagemErro, supabase,
+  FINAIS, PROXIMOS_SECRETARIA, STATUS, data, dataHora, dataSimples, mensagemErro, supabase,
   type Item, type Perfil, type Status,
 } from './dominio'
 import { BadgeCategoria, BadgeStatus, Erro, ResumoItens } from './ui'
@@ -57,6 +57,10 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
   const porStatus: Partial<Record<Status, number>> = {}
   for (const x of itens) porStatus[x.status] = (porStatus[x.status] ?? 0) + 1
   const selecionados = itens.filter((x) => selecao.has(x.id))
+  // Secretaria seleciona qualquer item; a escola só os adquiridos, para confirmar o recebimento.
+  const marcavel = (x: Item) => secretaria || x.status === 'adquirida'
+  const marcaveis = itens.filter(marcavel)
+  const temMarcacao = marcaveis.length > 0
 
   function alternar(itemId: number) {
     const nova = new Set(selecao)
@@ -65,8 +69,19 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
     setAviso('')
   }
   function selecionar(filtro: (x: Item) => boolean) {
-    setSelecao(new Set(itens.filter(filtro).map((x) => x.id)))
+    setSelecao(new Set(marcaveis.filter(filtro).map((x) => x.id)))
     setAviso('')
+  }
+
+  async function confirmarRecebimento() {
+    const n = selecao.size
+    if (!confirm(`Confirmar que ${n === 1 ? '1 item chegou' : `${n} itens chegaram`} na escola? A confirmação é definitiva.`)) return
+    setErro('')
+    const { error } = await supabase.rpc('atualizar_itens', { p_ids: [...selecao], p_status: 'entregue' })
+    if (error) return setErro(mensagemErro(error))
+    setSelecao(new Set())
+    await carregar()
+    setAviso(n === 1 ? 'Recebimento de 1 item confirmado.' : `Recebimento de ${n} itens confirmado.`)
   }
 
   return (
@@ -98,16 +113,19 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
           {selecao.size > 0 && <button className="link" onClick={() => setSelecao(new Set())}>Limpar seleção</button>}
         </div>
       )}
+      {!secretaria && temMarcacao && (
+        <p className="dica">Chegou algum item na escola? Marque os itens adquiridos que foram recebidos e confirme.</p>
+      )}
 
       <div className={secretaria ? 'area-atendimento' : ''}>
         <table className="tabela tabela-itens">
           <thead>
             <tr>
-              {secretaria && (
+              {temMarcacao && (
                 <th className="col-marcar">
-                  <input type="checkbox" aria-label="Selecionar todos os itens"
-                    checked={selecao.size > 0 && selecao.size === itens.length}
-                    ref={(el) => { if (el) el.indeterminate = selecao.size > 0 && selecao.size < itens.length }}
+                  <input type="checkbox" aria-label={secretaria ? 'Selecionar todos os itens' : 'Selecionar todos os itens adquiridos'}
+                    checked={selecao.size > 0 && selecao.size === marcaveis.length}
+                    ref={(el) => { if (el) el.indeterminate = selecao.size > 0 && selecao.size < marcaveis.length }}
                     onChange={(e) => selecionar(() => e.target.checked)} />
                 </th>
               )}
@@ -120,12 +138,15 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
           </thead>
           <tbody>
             {itens.map((x) => (
-              <tr key={x.id} className={`${atualizados.has(x.id) ? 'novo' : ''} ${selecao.has(x.id) ? 'selecionado' : ''}`}
-                onClick={secretaria ? () => alternar(x.id) : undefined}>
-                {secretaria && (
+              <tr key={x.id}
+                className={`${atualizados.has(x.id) ? 'novo' : ''} ${selecao.has(x.id) ? 'selecionado' : ''} ${marcavel(x) ? 'marcavel' : ''}`}
+                onClick={marcavel(x) ? () => alternar(x.id) : undefined}>
+                {temMarcacao && (
                   <td className="col-marcar">
-                    <input type="checkbox" aria-label={`Selecionar ${x.item}`} checked={selecao.has(x.id)}
-                      onClick={(e) => e.stopPropagation()} onChange={() => alternar(x.id)} />
+                    {marcavel(x) && (
+                      <input type="checkbox" aria-label={`Selecionar ${x.item}`} checked={selecao.has(x.id)}
+                        onClick={(e) => e.stopPropagation()} onChange={() => alternar(x.id)} />
+                    )}
                   </td>
                 )}
                 <td className="col-item">
@@ -159,6 +180,11 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
           </tbody>
         </table>
 
+        {!secretaria && selecao.size > 0 && (
+          <button className="botao primario barra-confirmar" onClick={confirmarRecebimento}>
+            Confirmar recebimento de {selecao.size} {selecao.size === 1 ? 'item' : 'itens'}
+          </button>
+        )}
         {secretaria && (
           <>
             {selecao.size > 0 && (
@@ -201,7 +227,7 @@ function Atendimento({ itens, aberto, aoFechar, aoSalvar }: {
 
   // Só oferece status para onde TODOS os selecionados podem ir.
   const opcoes = itens.length === 0 ? [] : (Object.keys(STATUS) as Status[])
-    .filter((s) => itens.every((x) => PROXIMOS[x.status].includes(s)))
+    .filter((s) => itens.every((x) => PROXIMOS_SECRETARIA[x.status].includes(s)))
   const alvo = status || (unico?.status ?? null)
   const comprado = alvo === 'adquirida' || alvo === 'entregue'
   const pedeQtd = unico !== null && (comprado || unico.quantidade_adquirida !== null)

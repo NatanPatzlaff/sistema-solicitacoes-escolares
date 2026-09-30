@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { CATEGORIAS, mensagemErro, supabase } from './dominio'
 import { Erro } from './ui'
+import { lerLista } from './colarLista'
 
 type Linha = { chave: number; categoria: string; item: string; quantidade: string; observacoes: string }
 
@@ -14,6 +15,22 @@ export function Nova() {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const lista = useRef<HTMLOListElement>(null)
+  const [colando, setColando] = useState(false)
+  const [colado, setColado] = useState('')
+  const [categoriaColada, setCategoriaColada] = useState('')
+  const [avisoColagem, setAvisoColagem] = useState('')
+
+  function aplicarColagem() {
+    const novos = lerLista(colado).map((x) => ({ ...linhaVazia(categoriaColada), ...x, item: x.item.slice(0, 200) }))
+    if (novos.length === 0) return
+    const preenchidas = linhas.filter((l) => l.item.trim() || l.observacoes.trim())
+    setLinhas([...preenchidas, ...novos])
+    const semQtd = novos.filter((x) => !x.quantidade).length
+    setAvisoColagem(`${novos.length} ${novos.length === 1 ? 'item adicionado' : 'itens adicionados'}. Confira categorias e quantidades`
+      + (semQtd ? ` — ${semQtd} sem quantidade, preencha antes de enviar.` : '.'))
+    setColado('')
+    setColando(false)
+  }
 
   const mudar = (chave: number, campo: keyof Linha, valor: string) =>
     setLinhas(linhas.map((l) => (l.chave === chave ? { ...l, [campo]: valor } : l)))
@@ -50,6 +67,33 @@ export function Nova() {
         <p className="suave">
           Inclua todos os itens do pedido. Se o item vem em embalagem, escreva no nome (ex.: “Luva M — caixa”).
         </p>
+        {colando ? (
+          <section className="colar" aria-label="Colar lista">
+            <label>
+              Cole a lista (um item por linha)
+              <textarea rows={8} value={colado} onChange={(e) => setColado(e.target.value)} autoFocus
+                placeholder={'20 água sanitária\n4 caixas álcool líquido\nLUVA M   200 CAIXAS'} />
+            </label>
+            <label>
+              Categoria para estes itens (pode ajustar item a item depois)
+              <select value={categoriaColada} onChange={(e) => setCategoriaColada(e.target.value)}>
+                <option value="">Escolher depois</option>
+                {Object.entries(CATEGORIAS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+              </select>
+            </label>
+            <div className="acoes">
+              <button type="button" className="botao primario" onClick={aplicarColagem} disabled={!colado.trim()}>
+                Adicionar itens da lista
+              </button>
+              <button type="button" className="botao secundario" onClick={() => setColando(false)}>Cancelar</button>
+            </div>
+          </section>
+        ) : (
+          <button type="button" className="botao secundario colar-botao" onClick={() => { setColando(true); setAvisoColagem('') }}>
+            Colar lista
+          </button>
+        )}
+        {avisoColagem && <p className="aviso" role="status">{avisoColagem}</p>}
         <ol className="linhas-itens" ref={lista}>
           {linhas.map((l, i) => (
             <li key={l.chave}>

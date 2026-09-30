@@ -15,13 +15,15 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Acompanha o status das solicitações da própria unidade.
 - Consulta o histórico da própria unidade.
 - Vê (sem editar) justificativa, quantidade adquirida e previsão de entrega registradas pela Secretaria.
-- Não altera status. *(Exceção possível: cancelar ou confirmar entrega — ver §12.)*
+- **Confirma o recebimento** dos itens adquiridos (*Adquirida → Entregue*), um a um ou vários de uma vez. É a única mudança de status que faz. *(Aprovado em 2026-09-30.)*
+- Pode **colar uma lista** no cadastro (uma linha por item); o sistema monta os itens e o gestor revisa.
 
 ### Secretaria
 - Vê solicitações de **todas** as unidades.
 - Filtra e busca (ver §7).
 - Altera status conforme o ciclo de vida (§5).
 - Registra justificativa, quantidade adquirida e previsão de entrega.
+- Consulta a **Lista de compras**: itens *Em análise* (ou *Cadastrada*) de todas as escolas, agrupados por nome e categoria, com a quantidade de cada escola, para lançar no SimCatarina. Pode copiar como texto. Só soma as quantidades quando nenhuma escola anotou embalagem. *(Aprovado em 2026-09-30.)*
 - Cria contas de gestores e da Secretaria pela tela **Contas** (nome, e-mail, perfil, escola, senha provisória). Pode cadastrar uma escola nova no mesmo formulário. *(Aprovado em 2026-09-28.)*
 - Editar, desativar ou excluir contas: **fora da primeira versão** (feito no painel do Supabase se necessário).
 
@@ -42,6 +44,8 @@ Lista fechada, idêntica em todas as telas:
 3. Material escolar e pedagógico
 4. Tecnologia
 5. Manutenção e infraestrutura — exemplos: **(a confirmar)**
+6. Cozinha e utensílios — panelas, talheres, pratos, potes, térmicas, descartáveis de cozinha *(aprovada em 2026-09-30)*
+7. Mobiliário e equipamentos — cadeiras, caminhas, mesas, tatames, tendas, relógios *(aprovada em 2026-09-30)*
 
 Não criar subcategorias sem aprovação.
 
@@ -62,7 +66,7 @@ Cadastrada → Em análise → Adquirida ──→ Entregue
 | Em análise | Adquirida | Secretaria |
 | Em análise | Indisponível | Secretaria |
 | Em análise | Não atendida | Secretaria |
-| Adquirida | Entregue | Secretaria **(a confirmar se o gestor confirma o recebimento)** |
+| Adquirida | Entregue | **Gestor** (confirma o recebimento; a Secretaria não marca) |
 
 Significado de cada status no fluxo real:
 
@@ -169,7 +173,7 @@ Não trocar sem autorização (ver CLAUDE.md).
 - Aviso de mudança de status dentro do sistema **(a confirmar)**
 
 ### Fora (primeira versão)
-- Relatórios, gráficos e exportação (PDF/planilha)
+- Relatórios, gráficos e exportação (PDF/planilha) — exceto a Lista de compras (§2), aprovada em 2026-09-30
 - Notificação por e-mail/WhatsApp
 - Controle de estoque, compras, licitações ou orçamento
 - Anexos/fotos nas solicitações **(avaliar depois — útil para manutenção)**
@@ -177,11 +181,8 @@ Não trocar sem autorização (ver CLAUDE.md).
 
 ## 12. A definir
 
-- **Categorias para cozinha e mobiliário/equipamentos** — hoje não há onde encaixar (§4).
-- "Colar lista" no cadastro (uma linha por item) para não digitar listas longas.
 - Gestores por unidade e usuários da Secretaria
 - Notificações: formato definitivo (§8)
 - Exemplos da categoria Manutenção e infraestrutura (§4)
 - Gestor pode editar/cancelar solicitação em *Cadastrada*?
-- Quem confirma *Entregue*: Secretaria ou gestor?
 - Prazo e prioridades da primeira entrega

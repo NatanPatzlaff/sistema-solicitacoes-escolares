@@ -14,7 +14,9 @@ create type categoria as enum (
   'material_expediente',
   'material_escolar_pedagogico',
   'tecnologia',
-  'manutencao_infraestrutura'
+  'manutencao_infraestrutura',
+  'cozinha_utensilios',
+  'mobiliario_equipamentos'
 );
 create type status_item as enum (
   'cadastrada', 'em_analise', 'adquirida', 'indisponivel', 'nao_atendida', 'entregue'
@@ -147,15 +149,11 @@ end $$;
 create trigger antes_de_cadastrar_item before insert on itens
 for each row execute function antes_de_cadastrar_item();
 
--- Atualização: só a Secretaria, só os campos dela, só transições do ciclo (§5).
+-- Atualização: Secretaria atende; gestor só confirma o recebimento (§5).
 create function antes_de_atualizar_item() returns trigger
 language plpgsql set search_path = public
 as $$
 begin
-  if via_api() and meu_papel() is distinct from 'secretaria' then
-    raise exception 'Apenas a Secretaria altera itens.';
-  end if;
-
   -- dados do pedido não mudam depois de cadastrados
   new.solicitacao_id := old.solicitacao_id;
   new.unidade_id := old.unidade_id;
@@ -166,6 +164,24 @@ begin
   new.observacoes := old.observacoes;
   new.criado_em := old.criado_em;
   new.justificativa := nullif(trim(new.justificativa), '');
+
+  if via_api() then
+    case meu_papel()
+      when 'gestor' then
+        if not (old.status = 'adquirida' and new.status = 'entregue') then
+          raise exception 'A escola só pode confirmar o recebimento de itens adquiridos.';
+        end if;
+        new.justificativa := old.justificativa;
+        new.quantidade_adquirida := old.quantidade_adquirida;
+        new.previsao_entrega := old.previsao_entrega;
+      when 'secretaria' then
+        if new.status = 'entregue' and old.status <> 'entregue' then
+          raise exception 'Quem confirma a entrega é a escola.';
+        end if;
+      else
+        raise exception 'Sem permissão para alterar itens.';
+    end case;
+  end if;
 
   if new.status <> old.status and not (
        (old.status = 'cadastrada' and new.status = 'em_analise')
@@ -202,7 +218,8 @@ begin
     values (new.id, new.status, auth.uid(),
             coalesce((select nome from perfis where id = auth.uid()), 'Sistema'));
   end if;
-  if tg_op = 'UPDATE' and new.status <> old.status then
+  -- aviso para a escola só quando quem mudou foi a Secretaria
+  if tg_op = 'UPDATE' and new.status <> old.status and meu_papel() is distinct from 'gestor' then
     insert into novidades values (new.id) on conflict do nothing;
   end if;
   return null;
@@ -353,9 +370,12 @@ using ((select meu_papel()) = 'secretaria' or unidade_id = (select minha_unidade
 create policy cadastrar on itens for insert to authenticated
 with check ((select meu_papel()) = 'gestor' and unidade_id = (select minha_unidade()));
 
+-- Secretaria atende qualquer item; gestor só mexe em itens adquiridos da própria escola
+-- (o trigger limita a mudança a "entregue").
 create policy atualizar on itens for update to authenticated
-using ((select meu_papel()) = 'secretaria')
-with check ((select meu_papel()) = 'secretaria');
+using ((select meu_papel()) = 'secretaria'
+       or (unidade_id = (select minha_unidade()) and status = 'adquirida'))
+with check ((select meu_papel()) = 'secretaria' or unidade_id = (select minha_unidade()));
 
 create policy ver on historico for select to authenticated
 using (item_id in (select id from itens));

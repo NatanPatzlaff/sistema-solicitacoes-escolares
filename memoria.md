@@ -13,13 +13,16 @@
 - 2026-09-24 — Escala: 5 unidades escolares; lançamentos manuais e esporádicos (por isso o risco real de 7 dias sem uso).
 - 2026-09-30 — **Fluxo real:** gestor pede → Secretaria compra manualmente no **SimCatarina** (fora do sistema) → registra o resultado. Pode alterar quantidade ou negar, sempre com justificativa. "Aprovar" = marcar *Adquirida*; não há status novo.
 - 2026-09-30 — **Solicitação com vários itens.** Status por item; a solicitação só mostra resumo. A Secretaria atua item a item ou em lote (todos/selecionados), tudo ou nada. Justificativa obrigatória também quando a quantidade comprada ≠ pedida.
+- 2026-09-30 — Categorias novas: **Cozinha e utensílios** e **Mobiliário e equipamentos** (7 no total).
+- 2026-09-30 — **Quem confirma "Entregue" é o gestor** (recebimento na escola). A Secretaria não marca mais "Entregue"; o gestor não muda nenhum outro campo. A confirmação da escola não gera aviso para ela mesma.
+- 2026-09-30 — **Colar lista** no cadastro do gestor (parser em `src/colarLista.ts`, testado com `deno test src/colarLista.test.ts`).
+- 2026-09-30 — **Lista de compras** para a Secretaria (itens em análise/cadastrados de todas as escolas, agrupados por nome; soma só sem embalagem anotada; copiar como texto). Exceção aprovada ao "sem relatórios" da primeira versão.
 - 2026-09-28 — A Secretaria cria as contas pela tela **Contas** do sistema (pedido do usuário). Implementado com Edge Function `criar-conta` (a service_role nunca vai para o site) e cadastro público desligado. Senha provisória gerada pela tela; a pessoa troca por "Esqueci minha senha".
 
 ## Decisões provisórias (a confirmar)
 
 Já implementadas assim na primeira versão (2026-09-28); mudar é simples se forem recusadas:
 - Notificação: aviso dentro do sistema (contador no menu + linha destacada), some quando o gestor abre a solicitação.
-- Quem marca "Entregue": a Secretaria.
 - Gestor não edita nem cancela solicitações.
 - Escopo da primeira versão conforme §11 de specs/sistema.md.
 
@@ -29,6 +32,7 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 - 2026-09-24 — Vercel: o plano Hobby gratuito é restrito a uso não comercial; sistema de prefeitura fica em zona cinzenta.
 - 2026-09-24 — Cloudflare Workers Cron para anti-pausa: funciona, mas não resolve o backup; o GitHub Actions resolve os dois.
 - 2026-09-28 — Criar contas direto do navegador (cadastro público + vínculo): exigiria deixar o cadastro aberto a qualquer pessoa. Preferida a Edge Function.
+- 2026-09-30 — Integração automática com o SimCatarina: não há API pública conhecida; robô que preenche o site seria frágil e arriscado. Substituída pela Lista de compras (copiar e lançar manualmente).
 - 2026-09-30 — Campo de unidade/embalagem (caixa, pacote, fardo…): as escolas já escrevem a embalagem no pedido (ex.: "Luva M — caixa"). Fica no texto do item ou nas observações; quantidade continua só número.
 
 ## Alterações realizadas
@@ -61,14 +65,11 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 ## Pendências
 
 Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dados, decidir antes de ir ao ar:
-- **"Colar lista"** no cadastro (uma linha por item), para não digitar listas longas — oferecido, não pedido ainda.
-- **Itens sem categoria:** utensílios de cozinha (panela, pratos, talheres, potes, térmicas, chaleira), mobiliário/equipamentos (cadeiras, caminhas, mesinhas, tatames, gazebo, relógio de parede) e descartáveis de cozinha (copos, guardanapos, papel alumínio/manteiga). Ficaram fora do seed.
 - Editar/desativar contas pela tela (hoje só pelo painel do Supabase) — avaliar se for preciso.
 - Nº de gestores por unidade e de usuários da Secretaria.
 - Formato das notificações.
 - Exemplos da categoria Manutenção e infraestrutura.
 - Gestor pode editar/cancelar solicitação em "Cadastrada"?
-- Quem confirma "Entregue"?
 - Prazo e prioridades da primeira entrega.
 
 ## Próximos passos

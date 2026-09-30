@@ -297,7 +297,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offs
 .tabela-itens .col-marcar { width: 44px; padding-right: 0; }
 .tabela-itens input[type='checkbox'] { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--texto); cursor: pointer; }
 .tabela-itens tbody tr { cursor: default; }
-.area-atendimento .tabela-itens tbody tr { cursor: pointer; }
+.tabela-itens tbody tr.marcavel { cursor: pointer; }
+.barra-confirmar { position: sticky; bottom: 16px; z-index: 10; justify-self: start; margin-top: 12px; box-shadow: var(--sombra); }
 .tabela-itens tr.selecionado td { background: #fbf5e6; }
 .nome-item { font-weight: 500; }
 .info-item { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 4px; font-size: 13px; }
@@ -357,7 +358,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offs
 .linha-item label { display: grid; gap: 4px; font-size: 14px; color: var(--texto-suave); min-width: 0; }
 .linha-item input, .linha-item select { width: 100%; min-width: 0; }
 .remover { color: var(--carmim); }
-.adicionar { justify-self: start; }
+.adicionar, .colar-botao { justify-self: start; }
+
+/* Lista de compras */
+.chip[aria-pressed='true'] { background: var(--texto); color: #fff; border-color: var(--texto); }
+.copiar-compras { margin-left: auto; }
+.compras { list-style: none; margin: 0; padding: 0; display: grid; }
+.compras > li { padding: 10px 0; border-top: 1px solid var(--borda); }
+.compras > li:first-child { border-top: 0; }
+.compras-item { display: flex; justify-content: space-between; gap: 12px; }
+.compras-total { font-weight: 600; font-variant-numeric: tabular-nums; }
+.compras-escolas { margin: 4px 0 0; padding-left: 16px; font-size: 14px; color: var(--texto-suave); }
+.compras-escolas a { color: var(--ouro-texto); }
+.compras-qtd { color: var(--texto); font-weight: 500; }
+.colar { display: grid; gap: 12px; padding: 16px; border: 1px dashed var(--borda); border-radius: 8px; }
+.colar label { display: grid; gap: 4px; font-size: 14px; color: var(--texto-suave); }
 @media (max-width: 1199px) {
   .linha-item { grid-template-columns: minmax(150px, 200px) 1fr 100px; gap: 8px 12px; }
   .linha-item .campo-obs { grid-column: 1 / 3; }

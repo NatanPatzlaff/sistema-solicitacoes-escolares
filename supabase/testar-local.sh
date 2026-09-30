@@ -15,7 +15,9 @@ rm -rf "$D"
 trap '"$PG/pg_ctl.exe" -D "$D" -m fast stop >/dev/null' EXIT
 
 echo "== Regras de acesso e ciclo de status (teste.sql)"
-$PSQL -d postgres -f teste.sql | grep -E "^--- |PASSARAM"
+SAIDA=$($PSQL -d postgres -f teste.sql 2>&1 || true)
+echo "$SAIDA" | grep -E "^--- |PASSARAM|ERRO|ERROR|CONTEXTO"
+echo "$SAIDA" | grep -q "TODOS OS TESTES PASSARAM" || { echo "FALHOU"; exit 1; }
 
 echo "== Dados de teste (seed.sql)"
 # Banco novo; os papéis anon/authenticated já existem no servidor (criados acima).
