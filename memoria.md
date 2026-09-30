@@ -81,7 +81,8 @@ Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dad
 
 ## Próximos passos
 
-1. Conferir Site URL/Redirect URLs no Supabase (Authentication → URL Configuration) = https://solicitacoes-escolares.pages.dev.
-2. Criar as contas reais dos gestores das 4 escolas pela tela Contas.
+1. Criar as contas reais dos gestores das 4 escolas pela tela Contas.
+
+(Supabase → URL Configuration feito em 2026-09-30: Site URL = https://solicitacoes-escolares.pages.dev; Redirect URLs = pages.dev/** e localhost:5173/**.)
 
 (Dados de teste do banco real apagados em 2026-09-30: sobraram só a conta Suporte e as 4 escolas.)
