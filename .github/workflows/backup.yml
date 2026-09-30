@@ -1,0 +1,32 @@
+# Backup semanal do banco (o plano gratuito do Supabase não oferece backup para baixar).
+# Guarda o arquivo como artefato PRIVADO deste repositório por 90 dias.
+# Precisa do secret SUPABASE_DB_URL (ver README.md); sem ele, não faz nada.
+name: Backup do banco
+
+on:
+  schedule:
+    - cron: '0 6 * * 0' # domingo, 3h de Brasília
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Gerar backup
+        if: env.SUPABASE_DB_URL != ''
+        run: |
+          # pg_dump da mesma versão do Supabase (17), via imagem oficial do PostgreSQL.
+          # public = dados do sistema; auth = contas de acesso.
+          docker run --rm -e URL="$SUPABASE_DB_URL" postgres:17 \
+            sh -c 'pg_dump "$URL" --no-owner --no-privileges -n public -n auth' \
+            | gzip > "backup-$(date +%F).sql.gz"
+          test -s backup-*.sql.gz
+      - name: Guardar backup
+        if: env.SUPABASE_DB_URL != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-banco
+          path: backup-*.sql.gz
+          retention-days: 90

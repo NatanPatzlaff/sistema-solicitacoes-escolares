@@ -5,6 +5,7 @@ import { Login, NovaSenha } from './Login'
 import { Lista } from './Lista'
 import { Detalhe } from './Detalhe'
 import { Nova } from './Nova'
+import { Contas } from './Contas'
 
 // Rotas por hash (#/, #/nova, #/solicitacao/12?…): funciona em hospedagem estática.
 function useRota() {
@@ -79,6 +80,7 @@ function Painel({ perfil }: { perfil: Perfil }) {
   const idDetalhe = caminho.match(/^\/solicitacao\/(\d+)$/)?.[1]
   const pagina = idDetalhe ? <Detalhe id={Number(idDetalhe)} perfil={perfil} />
     : caminho === '/nova' && gestor ? <Nova />
+    : caminho === '/contas' && !gestor ? <Contas />
     : <Lista perfil={perfil} params={params} />
 
   return (
@@ -102,9 +104,10 @@ function Painel({ perfil }: { perfil: Perfil }) {
         <span className="marca">Solicitações Escolares</span>
         <a href="#/" aria-current={caminho === '/' ? 'page' : undefined}>
           Solicitações
-          {novidades > 0 && <span className="contador" aria-label={`${novidades} com atualização`}>{novidades}</span>}
+          {novidades > 0 && <span className="contador" aria-label={`${novidades} ${novidades === 1 ? 'item atualizado' : 'itens atualizados'}`}>{novidades}</span>}
         </a>
         {gestor && <a href="#/nova" aria-current={caminho === '/nova' ? 'page' : undefined}>Nova solicitação</a>}
+        {!gestor && <a href="#/contas" aria-current={caminho === '/contas' ? 'page' : undefined}>Contas</a>}
         <div className="usuario">
           <strong>{perfil.nome}</strong>
           <span>{gestor ? perfil.unidades?.nome : 'Secretaria de Educação'}</span>

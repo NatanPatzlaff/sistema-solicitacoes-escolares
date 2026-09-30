@@ -1,0 +1,22 @@
+# Consulta diária ao Supabase: o plano gratuito pausa o projeto após 7 dias sem uso.
+# Precisa dos secrets SUPABASE_URL e SUPABASE_ANON_KEY (ver README.md); sem eles, não faz nada.
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # todo dia, 9h de Brasília
+  workflow_dispatch:
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Consulta simples ao banco
+        if: env.SUPABASE_URL != ''
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            "$SUPABASE_URL/rest/v1/unidades?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY"

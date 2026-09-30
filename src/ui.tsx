@@ -27,6 +27,21 @@ export function BadgeStatus({ status }: { status: Status }) {
   )
 }
 
+// Resumo dos itens de uma solicitação: ícone + número por status (nome no leitor de tela e no tooltip).
+export function ResumoItens({ porStatus }: { porStatus: Partial<Record<Status, number>> }) {
+  return (
+    <span className="resumo">
+      {(Object.keys(STATUS) as Status[]).filter((s) => porStatus[s]).map((s) => (
+        <span key={s} className={`badge status-${s}`} title={STATUS[s]}>
+          <IconeStatus status={s} />
+          {porStatus[s]}
+          <span className="sr"> {STATUS[s]}</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 export function BadgeCategoria({ categoria }: { categoria: Categoria }) {
   return <span className="badge categoria">{CATEGORIAS[categoria]}</span>
 }

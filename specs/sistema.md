@@ -6,6 +6,8 @@
 
 Substituir pedidos informais (telefone, e-mail, papel) por um canal único em que as unidades escolares registram necessidades e a Secretaria Municipal de Educação analisa, atende e dá retorno, com histórico rastreável por unidade.
 
+**Fluxo real (confirmado em 2026-09-30):** o gestor pede o que a escola precisa → alguém da Secretaria analisa e **compra manualmente no SimCatarina** (fora deste sistema) → registra aqui o resultado de cada item. Por falta de verba ou de necessidade, a Secretaria pode **alterar a quantidade** ou **negar** um item, sempre com justificativa, para o gestor saber o motivo.
+
 ## 2. Perfis de usuário
 
 ### Gestor da unidade escolar
@@ -20,14 +22,16 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Filtra e busca (ver §7).
 - Altera status conforme o ciclo de vida (§5).
 - Registra justificativa, quantidade adquirida e previsão de entrega.
-- Gerencia unidades escolares e contas de gestores. **(a confirmar)**
+- Cria contas de gestores e da Secretaria pela tela **Contas** (nome, e-mail, perfil, escola, senha provisória). Pode cadastrar uma escola nova no mesmo formulário. *(Aprovado em 2026-09-28.)*
+- Editar, desativar ou excluir contas: **fora da primeira versão** (feito no painel do Supabase se necessário).
 
 ## 3. Acesso e isolamento de dados
 
 - Todo usuário pertence a um perfil. Todo gestor está vinculado a **exatamente uma** unidade escolar.
 - O isolamento é garantido **no banco de dados** (regra por linha/unidade), não apenas na interface. Uma consulta de gestor nunca retorna dados de outra unidade, mesmo com a URL ou o ID alterados manualmente.
 - A unidade da solicitação vem do vínculo do gestor logado, nunca de um campo editável do formulário.
-- Autenticação: e-mail e senha, com contas criadas pela Secretaria. **(a confirmar)** Na primeira versão, as contas são criadas no painel do Supabase e vinculadas com `vincular_usuario()` (ver README.md).
+- Autenticação: e-mail e senha. Cadastro público **desligado**: só a Secretaria cria contas (tela Contas → Edge Function `criar-conta`, que confere se quem chama é da Secretaria). A primeira conta da Secretaria é criada no painel do Supabase + `vincular_usuario()` (ver README.md).
+- A chave `service_role` fica só na Edge Function, nunca no site.
 
 ## 4. Categorias
 
@@ -41,7 +45,9 @@ Lista fechada, idêntica em todas as telas:
 
 Não criar subcategorias sem aprovação.
 
-## 5. Ciclo de vida da solicitação
+## 5. Ciclo de vida de cada item
+
+Uma **solicitação** é um pedido com **um ou mais itens** (aprovado em 2026-09-30). O status é **de cada item**; a solicitação não tem status próprio, só um resumo dos itens (ex.: "12 itens · 5 adquiridos · 2 não atendidos").
 
 ```
 Cadastrada → Em análise → Adquirida ──→ Entregue
@@ -58,33 +64,54 @@ Cadastrada → Em análise → Adquirida ──→ Entregue
 | Em análise | Não atendida | Secretaria |
 | Adquirida | Entregue | Secretaria **(a confirmar se o gestor confirma o recebimento)** |
 
+Significado de cada status no fluxo real:
+
+| Status | Significa |
+|---|---|
+| Cadastrada | O gestor pediu |
+| Em análise | A Secretaria está avaliando / comprando |
+| Adquirida | Comprado no SimCatarina (quantidade pode ser diferente da pedida) |
+| Indisponível | Produto não disponível para compra |
+| Não atendida | Negado (falta de verba ou considerado desnecessário) |
+| Entregue | Chegou à escola |
+
 - **Indisponível**, **Não atendida** e **Entregue** são estados finais.
 - Nenhuma outra transição é permitida (sem voltar status, sem pular etapas) até decisão em contrário.
 - Toda mudança de status registra quem mudou e quando (histórico visível para ambos os perfis).
+- **Justificativa obrigatória** em *Indisponível*, *Não atendida* e sempre que a **quantidade adquirida for diferente da pedida**.
+- A Secretaria atua **item por item** ou em **vários itens de uma vez** (todos ou os selecionados): mesmo status, uma justificativa comum, quantidade adquirida = pedida (ajustável item a item). A ação em lote é **tudo ou nada**: se um item não puder mudar, nada é salvo e o sistema diz qual item impediu.
 
-## 6. Campos da solicitação
+## 6. Campos
+
+### Solicitação (o pedido)
 
 | Campo | Preenchido por | Obrigatório | Observação |
 |---|---|---|---|
+| Número | Sistema | Sim | Sequencial |
 | Unidade escolar | Sistema | Sim | Vem do vínculo do gestor |
-| Categoria | Gestor | Sim | Lista do §4 |
-| Item | Gestor | Sim | Texto livre, curto |
+| Observações gerais | Gestor | Não | Texto livre |
+| Data de cadastro | Sistema | Sim | Automático |
+
+### Item da solicitação
+
+| Campo | Preenchido por | Obrigatório | Observação |
+|---|---|---|---|
+| Categoria | Gestor | Sim | Lista do §4 (por item: as listas misturam categorias) |
+| Item | Gestor | Sim | Texto livre, curto. A embalagem, quando houver, vai no texto (ex.: "Luva M — caixa"); não há campo de unidade |
 | Quantidade | Gestor | Sim | Inteiro > 0 |
 | Observações | Gestor | Não | Texto livre |
 | Status | Sistema / Secretaria | Sim | Ver §5 |
-| Justificativa | Secretaria | Obrigatória em *Indisponível* e *Não atendida* **(a confirmar)** | |
-| Quantidade adquirida | Secretaria | Sim ao marcar *Adquirida* | Inteiro ≥ 0; pode ser menor que a solicitada |
+| Justificativa | Secretaria | Ver §5 | Motivo de alteração ou negativa |
+| Quantidade adquirida | Secretaria | Sim ao marcar *Adquirida* | Inteiro ≥ 0; pode ser diferente da pedida (com justificativa) |
 | Previsão de entrega | Secretaria | Não | Data |
-| Data de cadastro / de cada mudança | Sistema | Sim | Automático |
+| Data de cada mudança | Sistema | Sim | Automático (histórico) |
 
-## 7. Filtros e busca (Secretaria)
+## 7. Filtros e busca
 
-Combináveis entre si:
-- Escola
-- Categoria
+A lista principal mostra **solicitações** (escola, data, nº de itens, resumo por status). Filtros combináveis:
+- Escola (só Secretaria)
 - Período (data de cadastro: de / até)
-- Status
-- Nome do item (busca por texto, sem diferenciar maiúsculas/acentos)
+- Categoria, status e nome do item — mostram as solicitações que têm **algum item** assim (busca sem diferenciar maiúsculas/acentos)
 
 O gestor tem os mesmos filtros, **exceto escola**, restritos à própria unidade.
 
@@ -99,6 +126,7 @@ O gestor tem os mesmos filtros, **exceto escola**, restritos à própria unidade
 
 - **Interface:** React + Vite + TypeScript, site estático (sem servidor próprio).
 - **Banco, login e isolamento:** Supabase (plano gratuito): PostgreSQL, Auth e Row Level Security para o isolamento por unidade.
+- **Criação de contas:** uma Edge Function do Supabase (`criar-conta`, plano gratuito), única parte que roda em servidor.
 - **Hospedagem:** Cloudflare Pages (plano gratuito; permite uso comercial/institucional). Endereço `*.pages.dev`.
 - **Código:** GitHub, repositório **privado** `NatanPatzlaff/sistema-solicitacoes-escolares`.
 - **Manutenção automática (GitHub Actions, repositório privado):**
@@ -149,11 +177,11 @@ Não trocar sem autorização (ver CLAUDE.md).
 
 ## 12. A definir
 
-- Método de autenticação e quem cria as contas (§3)
+- **Categorias para cozinha e mobiliário/equipamentos** — hoje não há onde encaixar (§4).
+- "Colar lista" no cadastro (uma linha por item) para não digitar listas longas.
 - Gestores por unidade e usuários da Secretaria
 - Notificações: formato definitivo (§8)
 - Exemplos da categoria Manutenção e infraestrutura (§4)
 - Gestor pode editar/cancelar solicitação em *Cadastrada*?
 - Quem confirma *Entregue*: Secretaria ou gestor?
-- Justificativa obrigatória em *Indisponível* / *Não atendida*?
 - Prazo e prioridades da primeira entrega

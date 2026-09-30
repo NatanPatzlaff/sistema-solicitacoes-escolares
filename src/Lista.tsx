@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import {
-  CATEGORIAS, STATUS, data, dataSimples, mensagemErro, normalizar, supabase,
-  type Categoria, type Perfil, type Solicitacao, type Status,
+  CATEGORIAS, STATUS, data, dataSimples, mensagemErro, supabase,
+  type Categoria, type Perfil, type ResumoSolicitacao, type Status,
 } from './dominio'
-import { BadgeCategoria, BadgeStatus, Erro, IconeStatus } from './ui'
+import { Erro, IconeStatus, ResumoItens } from './ui'
 
 const POR_PAGINA = 25
 
-type Linha = Pick<Solicitacao, 'id' | 'categoria' | 'item' | 'quantidade' | 'status' | 'criado_em' | 'atualizado_em' | 'unidades'> & {
-  novidades: unknown
+// Data do filtro ("2026-09-01") → início daquele dia no fuso de quem usa.
+const inicioDoDia = (d: string, somarDias = 0) => {
+  const x = new Date(d + 'T00:00')
+  x.setDate(x.getDate() + somarDias)
+  return x.toISOString()
 }
 
 export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchParams }) {
@@ -17,8 +20,7 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
   const f = Object.fromEntries(params) as Record<string, string>
   const pagina = Math.max(1, Number(f.pagina) || 1)
 
-  const [linhas, setLinhas] = useState<Linha[]>([])
-  const [total, setTotal] = useState(0)
+  const [linhas, setLinhas] = useState<ResumoSolicitacao[]>([])
   const [contagem, setContagem] = useState<Partial<Record<Status, number>>>({})
   const [unidades, setUnidades] = useState<{ id: number; nome: string }[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -48,26 +50,20 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
 
   useEffect(() => {
     setCarregando(true)
-    let q = supabase.from('solicitacoes')
-      .select('id, categoria, item, quantidade, status, criado_em, atualizado_em, unidades(nome), novidades(solicitacao_id)', { count: 'exact' })
-    if (f.escola) q = q.eq('unidade_id', f.escola)
-    if (f.categoria) q = q.eq('categoria', f.categoria)
-    if (f.status) q = q.eq('status', f.status)
-    if (f.de) q = q.gte('criado_em', new Date(f.de + 'T00:00').toISOString())
-    if (f.ate) {
-      const fim = new Date(f.ate + 'T00:00')
-      fim.setDate(fim.getDate() + 1)
-      q = q.lt('criado_em', fim.toISOString())
-    }
-    if (f.item) q = q.ilike('item_busca', `%${normalizar(f.item).replace(/[\\%_]/g, '\\$&')}%`)
-    const inicio = (pagina - 1) * POR_PAGINA
-    q.order('criado_em', { ascending: false }).range(inicio, inicio + POR_PAGINA - 1)
-      .then(({ data, count, error }) => {
-        setErro(mensagemErro(error))
-        setLinhas((data ?? []) as unknown as Linha[])
-        setTotal(count ?? 0)
-        setCarregando(false)
-      })
+    supabase.rpc('buscar_solicitacoes', {
+      p_escola: f.escola || null,
+      p_categoria: f.categoria || null,
+      p_status: f.status || null,
+      p_de: f.de ? inicioDoDia(f.de) : null,
+      p_ate: f.ate ? inicioDoDia(f.ate, 1) : null,
+      p_item: f.item || null,
+      p_limite: POR_PAGINA,
+      p_deslocamento: (pagina - 1) * POR_PAGINA,
+    }).then(({ data, error }) => {
+      setErro(mensagemErro(error))
+      setLinhas((data ?? []) as ResumoSolicitacao[])
+      setCarregando(false)
+    })
     supabase.rpc('contagem_por_status').then(({ data }) => {
       setContagem(Object.fromEntries(((data ?? []) as { status: Status; total: number }[]).map((c) => [c.status, c.total])))
     })
@@ -77,12 +73,13 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
   const chips: [string, string][] = [
     ['escola', f.escola && nomeUnidade(f.escola)],
     ['categoria', f.categoria && CATEGORIAS[f.categoria as Categoria]],
-    ['status', f.status && STATUS[f.status as Status]],
+    ['status', f.status && `Itens: ${STATUS[f.status as Status]}`],
     ['de', f.de && `A partir de ${dataSimples(f.de)}`],
     ['ate', f.ate && `Até ${dataSimples(f.ate)}`],
     ['item', f.item && `Item: ${f.item}`],
   ].filter((c): c is [string, string] => Boolean(c[1]))
 
+  const total = linhas[0]?.total ?? 0
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
   const abrir = (id: number) => { location.hash = `#/solicitacao/${id}` }
 
@@ -94,6 +91,7 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
         {!secretaria && <p className="suave">{perfil.unidades?.nome}</p>}
       </div>
 
+      <h2 className="sr">Itens por status</h2>
       <div className="cards-status">
         {(Object.keys(STATUS) as Status[]).map((s) => (
           <button key={s} className={`card-status status-${s}`} aria-pressed={f.status === s}
@@ -137,7 +135,7 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
           </select>
         </label>
         <label>
-          Status
+          Status do item
           <select value={f.status ?? ''} onChange={(e) => aplicar({ status: e.target.value })}>
             <option value="">Todos</option>
             {Object.entries(STATUS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
@@ -188,27 +186,27 @@ export function Lista({ perfil, params }: { perfil: Perfil; params: URLSearchPar
         <table className="tabela" aria-busy={carregando}>
           <thead>
             <tr>
+              <th>Solicitação</th>
               {secretaria && <th>Escola</th>}
-              <th>Item</th>
-              <th className="col-categoria">Categoria</th>
-              <th className="num">Qtd.</th>
-              <th>Status</th>
+              <th className="num">Itens</th>
+              <th>Situação dos itens</th>
               <th className="col-data">Cadastrada em</th>
             </tr>
           </thead>
           <tbody>
             {linhas.map((l) => {
-              const novo = secretaria ? l.status === 'cadastrada' : Array.isArray(l.novidades) ? l.novidades.length > 0 : Boolean(l.novidades)
+              // Gestor: algum item mudou de status. Secretaria: há itens aguardando análise.
+              const novo = secretaria ? Boolean(l.por_status.cadastrada) : l.novidade
               return (
                 <tr key={l.id} className={novo ? 'novo' : ''} onClick={() => abrir(l.id)}>
-                  {secretaria && <td className="col-escola">{l.unidades?.nome}</td>}
                   <td className="col-item">
-                    <a href={`#/solicitacao/${l.id}`} onClick={(e) => e.stopPropagation()}>{l.item}</a>
-                    {novo && !secretaria && <span className="sr"> (status atualizado)</span>}
+                    <a href={`#/solicitacao/${l.id}`} onClick={(e) => e.stopPropagation()}>Nº {l.id}</a>
+                    {novo && <span className="sr">{secretaria ? ' (itens aguardando análise)' : ' (itens atualizados)'}</span>}
+                    {l.observacoes && <span className="obs-linha">{l.observacoes}</span>}
                   </td>
-                  <td className="col-categoria"><BadgeCategoria categoria={l.categoria} /></td>
-                  <td className="num col-qtd">{l.quantidade}</td>
-                  <td className="col-status"><BadgeStatus status={l.status} /></td>
+                  {secretaria && <td className="col-escola">{l.escola}</td>}
+                  <td className="num col-qtd" data-rotulo="Itens: ">{l.total_itens}</td>
+                  <td className="col-status"><ResumoItens porStatus={l.por_status} /></td>
                   <td className="col-data">{data(l.criado_em)}</td>
                 </tr>
               )

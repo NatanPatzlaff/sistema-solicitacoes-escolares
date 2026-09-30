@@ -1,36 +1,51 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
-  PROXIMOS, STATUS, data, dataHora, dataSimples, mensagemErro, supabase,
-  type Perfil, type Solicitacao, type Status,
+  FINAIS, PROXIMOS, STATUS, data, dataHora, dataSimples, mensagemErro, supabase,
+  type Item, type Perfil, type Status,
 } from './dominio'
-import { BadgeCategoria, BadgeStatus, Erro } from './ui'
+import { BadgeCategoria, BadgeStatus, Erro, ResumoItens } from './ui'
 
-type Evento = { id: number; status: Status; alterado_por_nome: string; alterado_em: string }
+type Cabecalho = { id: number; observacoes: string | null; criado_em: string; unidades: { nome: string } | null }
 
 export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
-  const [s, setS] = useState<Solicitacao | null | undefined>(undefined)
-  const [historico, setHistorico] = useState<Evento[]>([])
+  const secretaria = perfil.papel === 'secretaria'
+  const [cab, setCab] = useState<Cabecalho | null | undefined>(undefined)
+  const [itens, setItens] = useState<Item[]>([])
+  const [atualizados, setAtualizados] = useState<Set<number>>(new Set())
+  const [selecao, setSelecao] = useState<Set<number>>(new Set())
+  const [painelAberto, setPainelAberto] = useState(false)
   const [erro, setErro] = useState('')
+  const [aviso, setAviso] = useState('')
 
   async function carregar() {
-    const [sol, hist] = await Promise.all([
-      supabase.from('solicitacoes').select('*, unidades(nome)').eq('id', id).maybeSingle(),
-      supabase.from('historico').select('id, status, alterado_por_nome, alterado_em')
-        .eq('solicitacao_id', id).order('alterado_em'),
+    const [s, i] = await Promise.all([
+      supabase.from('solicitacoes').select('id, observacoes, criado_em, unidades(nome)').eq('id', id).maybeSingle(),
+      supabase.from('itens')
+        .select('id, categoria, item, quantidade, observacoes, status, justificativa, quantidade_adquirida, previsao_entrega, historico(id, status, alterado_por_nome, alterado_em)')
+        .eq('solicitacao_id', id).order('id').order('alterado_em', { referencedTable: 'historico' }),
     ])
-    setErro(mensagemErro(sol.error ?? hist.error))
-    setS(sol.data as Solicitacao | null)
-    setHistorico((hist.data ?? []) as Evento[])
+    setErro(mensagemErro(s.error ?? i.error))
+    setCab(s.data as Cabecalho | null)
+    const lista = (i.data ?? []) as Item[]
+    setItens(lista)
+    return lista
   }
 
   useEffect(() => {
-    carregar()
-    // Gestor abriu a solicitação: o aviso de atualização some.
-    if (perfil.papel === 'gestor') supabase.from('novidades').delete().eq('solicitacao_id', id).then()
+    setSelecao(new Set())
+    setAviso('')
+    carregar().then(async (lista) => {
+      if (secretaria || lista.length === 0) return
+      // Gestor abriu a solicitação: guarda quais itens mudaram (para destacar) e apaga os avisos.
+      const ids = lista.map((x) => x.id)
+      const { data } = await supabase.from('novidades').select('item_id').in('item_id', ids)
+      setAtualizados(new Set((data ?? []).map((n) => n.item_id as number)))
+      if (data?.length) await supabase.from('novidades').delete().in('item_id', ids)
+    })
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (s === undefined) return erro ? <Erro>{erro}</Erro> : null
-  if (s === null) {
+  if (cab === undefined) return erro ? <Erro>{erro}</Erro> : null
+  if (cab === null) {
     return (
       <div className="vazio">
         <p>Solicitação não encontrada.</p>
@@ -39,123 +54,235 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
     )
   }
 
+  const porStatus: Partial<Record<Status, number>> = {}
+  for (const x of itens) porStatus[x.status] = (porStatus[x.status] ?? 0) + 1
+  const selecionados = itens.filter((x) => selecao.has(x.id))
+
+  function alternar(itemId: number) {
+    const nova = new Set(selecao)
+    if (!nova.delete(itemId)) nova.add(itemId)
+    setSelecao(nova)
+    setAviso('')
+  }
+  function selecionar(filtro: (x: Item) => boolean) {
+    setSelecao(new Set(itens.filter(filtro).map((x) => x.id)))
+    setAviso('')
+  }
+
   return (
     <>
       <a className="voltar" href="#/" onClick={(e) => { if (history.length > 1) { e.preventDefault(); history.back() } }}>
         ← Solicitações
       </a>
       <div className="cabecalho-pagina">
-        <h1>{s.item}</h1>
-        <BadgeStatus status={s.status} />
+        <h1>Solicitação nº {cab.id}</h1>
+        <ResumoItens porStatus={porStatus} />
+        <p className="suave">
+          {cab.unidades?.nome} · cadastrada em {data(cab.criado_em)} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}
+        </p>
+        {cab.observacoes && <p className="obs-geral">{cab.observacoes}</p>}
       </div>
 
-      <div className="detalhe">
-        <section className="bloco">
-          <h2>Pedido</h2>
-          <dl className="campos">
-            <dt>Escola</dt><dd>{s.unidades?.nome}</dd>
-            <dt>Categoria</dt><dd><BadgeCategoria categoria={s.categoria} /></dd>
-            <dt>Quantidade</dt><dd className="num-esq">{s.quantidade}</dd>
-            <dt>Observações</dt><dd>{s.observacoes || '—'}</dd>
-            <dt>Cadastrada em</dt><dd>{data(s.criado_em)}</dd>
-          </dl>
-        </section>
+      <Erro>{erro}</Erro>
+      {aviso && <p className="aviso" role="status">{aviso}</p>}
 
-        <section className="bloco">
-          <h2>Atendimento</h2>
-          <dl className="campos">
-            <dt>Quantidade adquirida</dt><dd className="num-esq">{s.quantidade_adquirida ?? '—'}</dd>
-            <dt>Previsão de entrega</dt><dd>{s.previsao_entrega ? dataSimples(s.previsao_entrega) : '—'}</dd>
-            <dt>Justificativa</dt><dd>{s.justificativa || '—'}</dd>
-          </dl>
-          {perfil.papel === 'secretaria' && <Atender key={s.id} s={s} aoSalvar={carregar} />}
-        </section>
+      {secretaria && (
+        <div className="selecao-rapida" role="group" aria-label="Selecionar itens">
+          <span className="suave">Selecionar:</span>
+          <button className="chip" onClick={() => selecionar((x) => !FINAIS.includes(x.status))}>Todos em aberto</button>
+          {(['cadastrada', 'em_analise', 'adquirida'] as Status[]).filter((s) => porStatus[s]).map((s) => (
+            <button key={s} className="chip" onClick={() => selecionar((x) => x.status === s)}>
+              {STATUS[s]} ({porStatus[s]})
+            </button>
+          ))}
+          {selecao.size > 0 && <button className="link" onClick={() => setSelecao(new Set())}>Limpar seleção</button>}
+        </div>
+      )}
 
-        <section className="bloco">
-          <h2>Histórico</h2>
-          <ol className="historico">
-            {historico.map((h) => (
-              <li key={h.id}>
-                <BadgeStatus status={h.status} />
-                <span className="suave">{dataHora(h.alterado_em)} · {h.alterado_por_nome}</span>
-              </li>
+      <div className={secretaria ? 'area-atendimento' : ''}>
+        <table className="tabela tabela-itens">
+          <thead>
+            <tr>
+              {secretaria && (
+                <th className="col-marcar">
+                  <input type="checkbox" aria-label="Selecionar todos os itens"
+                    checked={selecao.size > 0 && selecao.size === itens.length}
+                    ref={(el) => { if (el) el.indeterminate = selecao.size > 0 && selecao.size < itens.length }}
+                    onChange={(e) => selecionar(() => e.target.checked)} />
+                </th>
+              )}
+              <th>Item</th>
+              <th className="num">Pedido</th>
+              <th className="num">Comprado</th>
+              <th>Status</th>
+              <th className="col-data">Previsão</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itens.map((x) => (
+              <tr key={x.id} className={`${atualizados.has(x.id) ? 'novo' : ''} ${selecao.has(x.id) ? 'selecionado' : ''}`}
+                onClick={secretaria ? () => alternar(x.id) : undefined}>
+                {secretaria && (
+                  <td className="col-marcar">
+                    <input type="checkbox" aria-label={`Selecionar ${x.item}`} checked={selecao.has(x.id)}
+                      onClick={(e) => e.stopPropagation()} onChange={() => alternar(x.id)} />
+                  </td>
+                )}
+                <td className="col-item">
+                  <span className="nome-item">{x.item}</span>
+                  {atualizados.has(x.id) && <span className="sr"> (status atualizado)</span>}
+                  <span className="info-item">
+                    <BadgeCategoria categoria={x.categoria} />
+                    {x.observacoes && <span className="suave">{x.observacoes}</span>}
+                  </span>
+                  {x.justificativa && <span className="justificativa"><strong>Justificativa:</strong> {x.justificativa}</span>}
+                  {x.historico.length > 0 && (
+                    <details className="historico-item" onClick={(e) => e.stopPropagation()}>
+                      <summary>Histórico</summary>
+                      <ol>
+                        {x.historico.map((h) => (
+                          <li key={h.id}>{STATUS[h.status]} · {dataHora(h.alterado_em)} · {h.alterado_por_nome}</li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
+                </td>
+                <td className="num col-qtd" data-rotulo="Pedido ">{x.quantidade}</td>
+                <td className={`num col-comprado ${x.quantidade_adquirida !== null && x.quantidade_adquirida !== x.quantidade ? 'diferente' : ''}`}
+                  data-rotulo="Comprado ">
+                  {x.quantidade_adquirida ?? '—'}
+                </td>
+                <td className="col-status"><BadgeStatus status={x.status} /></td>
+                <td className="col-data" data-rotulo="Previsão ">{x.previsao_entrega ? dataSimples(x.previsao_entrega) : '—'}</td>
+              </tr>
             ))}
-          </ol>
-        </section>
+          </tbody>
+        </table>
+
+        {secretaria && (
+          <>
+            {selecao.size > 0 && (
+              <button className="botao primario barra-selecao" onClick={() => setPainelAberto(true)}>
+                Atualizar {selecao.size} {selecao.size === 1 ? 'item' : 'itens'}
+              </button>
+            )}
+            <Atendimento key={[...selecao].join(',')} itens={selecionados} aberto={painelAberto}
+              aoFechar={() => setPainelAberto(false)}
+              aoSalvar={async (msg) => {
+                setPainelAberto(false)
+                setSelecao(new Set())
+                await carregar()
+                setAviso(msg)
+              }} />
+            {painelAberto && <div className="veu" onClick={() => setPainelAberto(false)} />}
+          </>
+        )}
       </div>
     </>
   )
 }
 
-const FINAIS: Status[] = ['entregue', 'indisponivel', 'nao_atendida']
+const MANTER = ''
 
-function Atender({ s, aoSalvar }: { s: Solicitacao; aoSalvar: () => void }) {
-  const [status, setStatus] = useState<Status>(s.status)
-  const [qtd, setQtd] = useState(s.quantidade_adquirida?.toString() ?? '')
-  const [previsao, setPrevisao] = useState(s.previsao_entrega ?? '')
-  const [justificativa, setJustificativa] = useState(s.justificativa ?? '')
+// Painel da Secretaria: aplica status/quantidade/justificativa/previsão aos itens selecionados.
+function Atendimento({ itens, aberto, aoFechar, aoSalvar }: {
+  itens: Item[]
+  aberto: boolean
+  aoFechar: () => void
+  aoSalvar: (msg: string) => void
+}) {
+  const unico = itens.length === 1 ? itens[0] : null
+  const [status, setStatus] = useState<Status | typeof MANTER>(MANTER)
+  const [qtd, setQtd] = useState(unico ? String(unico.quantidade_adquirida ?? unico.quantidade) : '')
+  const [previsao, setPrevisao] = useState(unico?.previsao_entrega ?? '')
+  const [justificativa, setJustificativa] = useState(unico?.justificativa ?? '')
   const [erro, setErro] = useState('')
-  const [salvo, setSalvo] = useState('')
   const [enviando, setEnviando] = useState(false)
 
-  if (FINAIS.includes(s.status)) {
-    return <p className="suave">Status final. Esta solicitação não pode mais ser alterada.</p>
-  }
-
-  const pedeQtd = status === 'adquirida' || status === 'entregue'
-  const pedeJustificativa = status === 'indisponivel' || status === 'nao_atendida'
+  // Só oferece status para onde TODOS os selecionados podem ir.
+  const opcoes = itens.length === 0 ? [] : (Object.keys(STATUS) as Status[])
+    .filter((s) => itens.every((x) => PROXIMOS[x.status].includes(s)))
+  const alvo = status || (unico?.status ?? null)
+  const comprado = alvo === 'adquirida' || alvo === 'entregue'
+  const pedeQtd = unico !== null && (comprado || unico.quantidade_adquirida !== null)
+  const qtdMudou = unico !== null && pedeQtd && qtd !== '' && Number(qtd) !== unico.quantidade
+  const pedeJustificativa = status === 'indisponivel' || status === 'nao_atendida' || qtdMudou
+  const todosFinais = itens.length > 0 && itens.every((x) => FINAIS.includes(x.status))
 
   async function salvar(e: FormEvent) {
     e.preventDefault()
-    if (FINAIS.includes(status) && status !== s.status &&
-        !confirm(`Marcar como "${STATUS[status]}"? Esta mudança é definitiva.`)) return
+    if (status && FINAIS.includes(status) &&
+        !confirm(`Marcar ${itens.length === 1 ? 'o item' : `${itens.length} itens`} como "${STATUS[status]}"? Esta mudança é definitiva.`)) return
     setEnviando(true)
     setErro('')
-    const { error } = await supabase.from('solicitacoes').update({
-      status,
-      quantidade_adquirida: qtd === '' ? null : Number(qtd),
-      previsao_entrega: previsao || null,
-      justificativa: justificativa.trim() || null,
-    }).eq('id', s.id)
+    const { error } = await supabase.rpc('atualizar_itens', {
+      p_ids: itens.map((x) => x.id),
+      p_status: status || null,
+      p_quantidade_adquirida: pedeQtd && qtd !== '' ? Number(qtd) : null,
+      p_justificativa: justificativa.trim() || null,
+      p_previsao_entrega: previsao || null,
+    })
     setEnviando(false)
     if (error) return setErro(mensagemErro(error))
-    setSalvo(status === s.status ? 'Alterações salvas.' : `Status alterado para ${STATUS[status]}.`)
-    aoSalvar()
+    const quantos = itens.length === 1 ? '1 item atualizado' : `${itens.length} itens atualizados`
+    aoSalvar(status ? `${quantos} para ${STATUS[status]}.` : `${quantos}.`)
   }
 
   return (
-    <form className="formulario atender" onSubmit={salvar}>
-      <h3>Atualizar atendimento</h3>
-      <label>
-        Status
-        <select value={status} onChange={(e) => { setStatus(e.target.value as Status); setSalvo('') }}>
-          <option value={s.status}>{STATUS[s.status]} (atual)</option>
-          {PROXIMOS[s.status].map((p) => <option key={p} value={p}>{STATUS[p]}</option>)}
-        </select>
-      </label>
-      {(pedeQtd || s.quantidade_adquirida !== null) && (
-        <label>
-          Quantidade adquirida{pedeQtd && ' *'}
-          <input type="number" inputMode="numeric" min={0} step={1} required={pedeQtd}
-            value={qtd} onChange={(e) => setQtd(e.target.value)} />
-        </label>
+    <form className={`formulario painel-atendimento ${aberto ? 'aberto' : ''}`} onSubmit={salvar}
+      onKeyDown={(e) => e.key === 'Escape' && aoFechar()}>
+      <div className="painel-topo">
+        <h2>Atualizar itens</h2>
+        <button type="button" className="link fechar-painel" onClick={aoFechar}>Fechar</button>
+      </div>
+      {itens.length === 0 ? (
+        <p className="suave">Selecione um ou mais itens na lista para mudar o status, a quantidade comprada ou registrar uma justificativa.</p>
+      ) : todosFinais ? (
+        <p className="suave">Os itens selecionados já estão em status final e não podem mais ser alterados.</p>
+      ) : (
+        <>
+          <p className="suave">
+            {unico ? <><strong>{unico.item}</strong> · pedido: {unico.quantidade}</> : `${itens.length} itens selecionados`}
+          </p>
+          <label>
+            Novo status
+            <select value={status} onChange={(e) => setStatus(e.target.value as Status | typeof MANTER)}>
+              <option value={MANTER}>Manter o status atual</option>
+              {opcoes.map((s) => <option key={s} value={s}>{STATUS[s]}</option>)}
+            </select>
+            {opcoes.length === 0 && itens.length > 1 && (
+              <span className="dica">Os itens selecionados estão em etapas diferentes. Use “Selecionar” para pegar itens da mesma etapa.</span>
+            )}
+          </label>
+          {pedeQtd && (
+            <label>
+              Quantidade comprada{comprado && ' *'}
+              <input type="number" inputMode="numeric" min={0} step={1} required={comprado}
+                value={qtd} onChange={(e) => setQtd(e.target.value)} />
+            </label>
+          )}
+          {!unico && comprado && (
+            <p className="dica">Cada item fica com a quantidade que foi pedida. Para comprar uma quantidade diferente, selecione só aquele item.</p>
+          )}
+          {(comprado || alvo === 'em_analise') && (
+            <label>
+              Previsão de entrega
+              <input type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
+            </label>
+          )}
+          <label>
+            Justificativa{pedeJustificativa && ' *'}
+            <textarea rows={3} required={pedeJustificativa} value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              placeholder={qtdMudou ? 'Por que a quantidade mudou? Ex.: falta de verba.' : 'Motivo, visível para a escola.'} />
+            {!unico && <span className="dica">A mesma justificativa vale para todos os itens selecionados.</span>}
+          </label>
+          <Erro>{erro}</Erro>
+          <button className="botao primario" disabled={enviando}>
+            {itens.length === 1 ? 'Salvar item' : `Aplicar a ${itens.length} itens`}
+          </button>
+        </>
       )}
-      {!pedeJustificativa && (
-        <label>
-          Previsão de entrega
-          <input type="date" value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
-        </label>
-      )}
-      <label>
-        Justificativa{pedeJustificativa && ' *'}
-        <textarea rows={3} required={pedeJustificativa} value={justificativa}
-          onChange={(e) => setJustificativa(e.target.value)} />
-      </label>
-      <Erro>{erro}</Erro>
-      {salvo && <p className="aviso" role="status">{salvo}</p>}
-      <button className="botao primario" disabled={enviando}>
-        {status === s.status ? 'Salvar alterações' : 'Salvar status'}
-      </button>
     </form>
   )
 }

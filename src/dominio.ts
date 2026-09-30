@@ -44,9 +44,22 @@ export type Perfil = {
   unidades: { nome: string } | null
 }
 
-export type Solicitacao = {
+// Linha da lista (função buscar_solicitacoes do banco).
+export type ResumoSolicitacao = {
   id: number
-  unidade_id: number
+  escola: string
+  observacoes: string | null
+  criado_em: string
+  total_itens: number
+  por_status: Partial<Record<Status, number>>
+  novidade: boolean
+  total: number
+}
+
+export type Evento = { id: number; status: Status; alterado_por_nome: string; alterado_em: string }
+
+export type Item = {
+  id: number
   categoria: Categoria
   item: string
   quantidade: number
@@ -55,10 +68,10 @@ export type Solicitacao = {
   justificativa: string | null
   quantidade_adquirida: number | null
   previsao_entrega: string | null
-  criado_em: string
-  atualizado_em: string
-  unidades: { nome: string } | null
+  historico: Evento[]
 }
+
+export const FINAIS: Status[] = ['entregue', 'indisponivel', 'nao_atendida']
 
 export const data = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
 export const dataHora = (iso: string) =>
