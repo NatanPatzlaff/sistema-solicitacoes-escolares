@@ -29,7 +29,7 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Consulta a **Lista de compras**: itens *Em análise* (ou *Cadastrada*) de todas as escolas, agrupados por nome e categoria, com a quantidade de cada escola, para lançar no SimCatarina. Pode copiar como texto. Só soma as quantidades quando nenhuma escola anotou embalagem. *(Aprovado em 2026-09-30.)*
 - Mantém o **catálogo de produtos** (tela Catálogo): cadastra, renomeia, muda categoria e desativa produtos (desativado some da escolha das escolas, mas pedidos antigos continuam). Vê os itens pedidos **fora do catálogo** e os inclui com um clique. *(Aprovado em 2026-09-30.)*
 - Cria contas de gestores e da Secretaria pela tela **Contas** (nome, e-mail, perfil, escola, senha provisória). Pode cadastrar uma escola nova no mesmo formulário. *(Aprovado em 2026-09-28.)*
-- Editar, desativar ou excluir contas: **fora da primeira versão** (feito no painel do Supabase se necessário).
+- **Exclui contas** pela tela Contas (menos a própria e a última da Secretaria). Conta com pedidos: a pessoa perde o acesso, os pedidos da escola e o histórico (com o nome de quem fez) continuam. *(Aprovado em 2026-09-30; implementação pendente.)* Editar e desativar contas: fora da primeira versão.
 
 ## 3. Acesso e isolamento de dados
 
