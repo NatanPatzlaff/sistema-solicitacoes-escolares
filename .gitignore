@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Arquivos temporários da CLI do Supabase
+supabase/.temp/
