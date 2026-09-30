@@ -32,6 +32,8 @@ grant usage on schema public, auth, extensions to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 \ir schema.sql
+\ir migracoes/001-catalogo.sql
+\ir catalogo.sql
 \ir seed.sql
 \ir verificar-seed.sql
 SQL

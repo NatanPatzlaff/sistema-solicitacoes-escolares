@@ -4,6 +4,7 @@ import { Erro } from './ui'
 
 type Linha = {
   id: number
+  produto_id: number | null
   categoria: Categoria
   item: string
   item_busca: string
@@ -14,11 +15,11 @@ type Linha = {
 }
 type Grupo = { item: string; categoria: Categoria; linhas: Linha[] }
 
-// Itens com o mesmo nome (sem diferenciar maiúsculas/acentos) viram uma linha só.
+// Itens do mesmo produto do catálogo viram uma linha só; itens fora do catálogo, pelo nome.
 function agrupar(linhas: Linha[]) {
   const grupos = new Map<string, Grupo>()
   for (const l of linhas) {
-    const chave = `${l.categoria}|${l.item_busca}`
+    const chave = l.produto_id ? `p${l.produto_id}` : `${l.categoria}|${l.item_busca}`
     const g = grupos.get(chave) ?? { item: l.item, categoria: l.categoria, linhas: [] }
     g.linhas.push(l)
     grupos.set(chave, g)
@@ -53,7 +54,7 @@ export function Compras() {
     setCarregando(true)
     setCopiado(false)
     supabase.from('itens')
-      .select('id, categoria, item, item_busca, quantidade, observacoes, solicitacao_id, unidades(nome)')
+      .select('id, produto_id, categoria, item, item_busca, quantidade, observacoes, solicitacao_id, unidades(nome)')
       .eq('status', status).order('categoria').order('item_busca')
       .then(({ data, error }) => {
         setErro(mensagemErro(error))
@@ -70,7 +71,7 @@ export function Compras() {
     <>
       <div className="cabecalho-pagina">
         <h1>Lista de compras</h1>
-        <p className="suave">Itens de todas as escolas, juntos por nome, para lançar no SimCatarina.</p>
+        <p className="suave">Itens de todas as escolas, juntos por produto, para lançar no SimCatarina.</p>
       </div>
 
       <div className="selecao-rapida" role="group" aria-label="Mostrar itens">

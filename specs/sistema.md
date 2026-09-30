@@ -16,7 +16,10 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Consulta o histórico da própria unidade.
 - Vê (sem editar) justificativa, quantidade adquirida e previsão de entrega registradas pela Secretaria.
 - **Confirma o recebimento** dos itens adquiridos (*Adquirida → Entregue*), um a um ou vários de uma vez. É a única mudança de status que faz. *(Aprovado em 2026-09-30.)*
-- Pode **colar uma lista** no cadastro (uma linha por item); o sistema monta os itens e o gestor revisa.
+- Monta o pedido **escolhendo produtos do catálogo** (busca por nome e categoria). A quantidade vem preenchida com a do **último pedido da escola para aquele produto** e pode ser editada. *(Aprovado em 2026-09-30.)*
+- Pode pedir **"outro item"** fora do catálogo (nome e categoria digitados).
+- Pode **repetir um pedido anterior**: a partir de uma solicitação antiga, cria uma nova já preenchida com os mesmos itens e quantidades, para ajustar e enviar.
+- Pode **colar uma lista** no cadastro (uma linha por item); nomes iguais aos do catálogo viram o produto do catálogo, os demais viram "outro item".
 
 ### Secretaria
 - Vê solicitações de **todas** as unidades.
@@ -24,6 +27,7 @@ Substituir pedidos informais (telefone, e-mail, papel) por um canal único em qu
 - Altera status conforme o ciclo de vida (§5).
 - Registra justificativa, quantidade adquirida e previsão de entrega.
 - Consulta a **Lista de compras**: itens *Em análise* (ou *Cadastrada*) de todas as escolas, agrupados por nome e categoria, com a quantidade de cada escola, para lançar no SimCatarina. Pode copiar como texto. Só soma as quantidades quando nenhuma escola anotou embalagem. *(Aprovado em 2026-09-30.)*
+- Mantém o **catálogo de produtos** (tela Catálogo): cadastra, renomeia, muda categoria e desativa produtos (desativado some da escolha das escolas, mas pedidos antigos continuam). Vê os itens pedidos **fora do catálogo** e os inclui com um clique. *(Aprovado em 2026-09-30.)*
 - Cria contas de gestores e da Secretaria pela tela **Contas** (nome, e-mail, perfil, escola, senha provisória). Pode cadastrar uma escola nova no mesmo formulário. *(Aprovado em 2026-09-28.)*
 - Editar, desativar ou excluir contas: **fora da primeira versão** (feito no painel do Supabase se necessário).
 
@@ -100,8 +104,9 @@ Significado de cada status no fluxo real:
 
 | Campo | Preenchido por | Obrigatório | Observação |
 |---|---|---|---|
-| Categoria | Gestor | Sim | Lista do §4 (por item: as listas misturam categorias) |
-| Item | Gestor | Sim | Texto livre, curto. A embalagem, quando houver, vai no texto (ex.: "Luva M — caixa"); não há campo de unidade |
+| Produto | Gestor | Não | Produto do catálogo. Vazio = "outro item" (fora do catálogo) |
+| Categoria | Catálogo / Gestor | Sim | Vem do produto; em "outro item", o gestor escolhe (§4) |
+| Item | Catálogo / Gestor | Sim | Nome do produto no momento do pedido (a embalagem faz parte do nome, ex.: "Luva de procedimento M (caixa)"); em "outro item", texto livre. Não há campo de unidade |
 | Quantidade | Gestor | Sim | Inteiro > 0 |
 | Observações | Gestor | Não | Texto livre |
 | Status | Sistema / Secretaria | Sim | Ver §5 |

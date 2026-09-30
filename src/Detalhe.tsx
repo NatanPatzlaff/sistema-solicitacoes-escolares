@@ -21,7 +21,7 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
     const [s, i] = await Promise.all([
       supabase.from('solicitacoes').select('id, observacoes, criado_em, unidades(nome)').eq('id', id).maybeSingle(),
       supabase.from('itens')
-        .select('id, categoria, item, quantidade, observacoes, status, justificativa, quantidade_adquirida, previsao_entrega, historico(id, status, alterado_por_nome, alterado_em)')
+        .select('id, produto_id, categoria, item, quantidade, observacoes, status, justificativa, quantidade_adquirida, previsao_entrega, historico(id, status, alterado_por_nome, alterado_em)')
         .eq('solicitacao_id', id).order('id').order('alterado_em', { referencedTable: 'historico' }),
     ])
     setErro(mensagemErro(s.error ?? i.error))
@@ -96,6 +96,9 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
           {cab.unidades?.nome} · cadastrada em {data(cab.criado_em)} · {itens.length} {itens.length === 1 ? 'item' : 'itens'}
         </p>
         {cab.observacoes && <p className="obs-geral">{cab.observacoes}</p>}
+        {!secretaria && (
+          <a className="botao secundario" href={`#/nova?base=${cab.id}`}>Repetir este pedido</a>
+        )}
       </div>
 
       <Erro>{erro}</Erro>
@@ -154,6 +157,7 @@ export function Detalhe({ id, perfil }: { id: number; perfil: Perfil }) {
                   {atualizados.has(x.id) && <span className="sr"> (status atualizado)</span>}
                   <span className="info-item">
                     <BadgeCategoria categoria={x.categoria} />
+                    {!x.produto_id && <span className="badge categoria">fora do catálogo</span>}
                     {x.observacoes && <span className="suave">{x.observacoes}</span>}
                   </span>
                   {x.justificativa && <span className="justificativa"><strong>Justificativa:</strong> {x.justificativa}</span>}

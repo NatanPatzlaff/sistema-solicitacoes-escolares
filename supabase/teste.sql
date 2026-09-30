@@ -17,6 +17,13 @@ alter default privileges in schema public grant all on sequences to anon, authen
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 
 \ir schema.sql
+\ir migracoes/001-catalogo.sql
+
+insert into produtos (nome, categoria) values
+  ('  Papel   sulfite A4 (resma) ', 'material_expediente'),
+  ('Detergente (caixa com 24)', 'limpeza_higiene'),
+  ('Produto antigo', 'tecnologia');
+update produtos set ativo = false where nome = 'Produto antigo';
 
 insert into auth.users values
   ('00000000-0000-0000-0000-00000000000a', 'gestor.a@teste'),
@@ -110,13 +117,64 @@ begin
   end;
 end $$;
 
+\echo '--- catálogo'
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+do $$
+declare
+  papel bigint := (select id from produtos where nome = 'Papel sulfite A4 (resma)');
+  sid bigint;
+  r itens;
+begin
+  assert papel is not null, 'nome do produto aparado e com espaços normalizados';
+  assert (select count(*) from produtos) = 3, 'gestor vê o catálogo';
+  -- item do catálogo: nome e categoria vêm do produto, não do que o formulário mandou
+  sid := criar_solicitacao(null, jsonb_build_array(
+    jsonb_build_object('produto_id', papel, 'quantidade', 20, 'item', 'outro nome', 'categoria', 'tecnologia'),
+    jsonb_build_object('categoria', 'tecnologia', 'item', 'Cabo HDMI', 'quantidade', 2)));
+  select * into r from itens where solicitacao_id = sid and produto_id = papel;
+  assert r.item = 'Papel sulfite A4 (resma)' and r.categoria = 'material_expediente', 'item do catálogo';
+  assert (select produto_id from itens where solicitacao_id = sid and item = 'Cabo HDMI') is null, 'outro item';
+  sid := criar_solicitacao(null, jsonb_build_array(jsonb_build_object('produto_id', papel, 'quantidade', 35)));
+  assert (select quantidade from ultimas_quantidades() where produto_id = papel) = 35, 'última quantidade da escola';
+  begin
+    perform criar_solicitacao(null, jsonb_build_array(jsonb_build_object(
+      'produto_id', (select id from produtos where nome = 'Produto antigo'), 'quantidade', 1)));
+    assert false, 'produto desativado não pode ser pedido';
+  exception when raise_exception then null;
+  end;
+  begin
+    insert into produtos (nome, categoria) values ('Pirata', 'tecnologia');
+    assert false, 'gestor não cadastra produto';
+  exception when insufficient_privilege then null;
+  end;
+  update produtos set nome = 'hackeado';
+  assert not exists (select 1 from produtos where nome = 'hackeado'), 'gestor não edita produto';
+end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+do $$
+begin
+  assert not exists (select 1 from ultimas_quantidades()), 'B não vê quantidades da escola A';
+end $$;
+
 \echo '--- Secretaria: item a item'
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000c', false);
 do $$
 declare id_pa bigint := (select id from itens where item = 'Pá de LIXO');
 begin
-  assert (select count(*) from itens) = 4, 'Secretaria vê todos os itens';
-  assert (select count(*) from buscar_solicitacoes()) = 3, 'Secretaria vê todas as solicitações';
+  assert (select count(*) from itens) = 7, 'Secretaria vê todos os itens';
+  assert (select count(*) from buscar_solicitacoes()) = 5, 'Secretaria vê todas as solicitações';
+  -- catálogo: Secretaria cadastra, renomeia e desativa; nome repetido (sem acento/maiúsculas) é barrado
+  insert into produtos (nome, categoria) values ('Grampeador de mesa', 'material_expediente');
+  begin
+    insert into produtos (nome, categoria) values ('GRAMPEADOR DE MESA', 'material_expediente');
+    assert false, 'produto repetido';
+  exception when unique_violation then null;
+  end;
+  update produtos set nome = 'Grampeador de mesa grande', ativo = false where nome = 'Grampeador de mesa';
+  assert (select not ativo from produtos where nome = 'Grampeador de mesa grande'), 'Secretaria edita produto';
+  -- produto do item não muda depois do pedido
+  update itens set produto_id = null where produto_id is not null;
+  assert (select count(*) from itens where produto_id is not null) = 2, 'produto do item travado';
   assert (select count(*) from perfis where email like '%@teste') = 3, 'Secretaria lista as contas';
   begin
     perform criar_solicitacao(null, '[{"categoria": "tecnologia", "item": "X", "quantidade": 1}]');

@@ -9,6 +9,9 @@ do $$
 declare cinderela bigint := (select id from unidades where nome = 'Pré Escolar Cinderela');
 begin
   assert (select count(*) from solicitacoes) = 4, '4 solicitações (uma por lista)';
+  assert (select count(*) from itens) = 301, 'todos os 301 itens ligados a um produto do catálogo';
+  assert not exists (select 1 from itens i join produtos p on p.id = i.produto_id where i.item <> p.nome or i.categoria <> p.categoria),
+    'item com nome/categoria diferente do produto';
   assert not exists (select 1 from itens i join solicitacoes s on s.id = i.solicitacao_id where i.unidade_id <> s.unidade_id),
     'item com unidade diferente da solicitação';
   assert not exists (select 1 from itens where status in ('adquirida', 'entregue') and quantidade_adquirida is null),

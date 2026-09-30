@@ -4,7 +4,9 @@ Documentação do projeto: [CLAUDE.md](CLAUDE.md), [specs/sistema.md](specs/sist
 
 ## Colocar no ar (custo zero)
 
-1. **Supabase** (supabase.com, plano gratuito): crie um projeto e, no **SQL Editor**, rode todo o conteúdo de [supabase/schema.sql](supabase/schema.sql).
+1. **Supabase** (supabase.com, plano gratuito): crie um projeto e, no **SQL Editor**, rode nesta ordem:
+   [supabase/schema.sql](supabase/schema.sql), os arquivos de [supabase/migracoes/](supabase/migracoes/) (em ordem numérica) e [supabase/catalogo.sql](supabase/catalogo.sql) (catálogo inicial de produtos).
+   Mudanças futuras no banco entram como novos arquivos em `migracoes/`, aplicados no projeto que já está no ar.
 2. **Fechar o cadastro público:** em *Authentication > Sign In / Providers*, desligue *Allow new users to sign up*. Só a Secretaria cria contas.
 3. **Função de criar contas:** publique a Edge Function (gratuita):
    ```sh

@@ -1,59 +1,116 @@
-import { useRef, useState, type FormEvent } from 'react'
-import { CATEGORIAS, mensagemErro, supabase } from './dominio'
-import { Erro } from './ui'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { CATEGORIAS, mensagemErro, nomeBase, normalizar, supabase, type Produto } from './dominio'
+import { BadgeCategoria, Erro } from './ui'
 import { lerLista } from './colarLista'
 
-type Linha = { chave: number; categoria: string; item: string; quantidade: string; observacoes: string }
+// Linha do pedido: produto do catálogo (produto_id) ou "outro item" (produto_id null, nome digitado).
+type Linha = {
+  chave: number
+  produto_id: number | null
+  categoria: string
+  item: string
+  quantidade: string
+  observacoes: string
+  ultima?: number
+}
 
 let proximaChave = 0
-const linhaVazia = (categoria = ''): Linha =>
-  ({ chave: proximaChave++, categoria, item: '', quantidade: '1', observacoes: '' })
+const MAX_RESULTADOS = 40
 
-export function Nova() {
-  const [linhas, setLinhas] = useState<Linha[]>(() => [linhaVazia()])
+export function Nova({ params }: { params: URLSearchParams }) {
+  const base = params.get('base')
+  const [produtos, setProdutos] = useState<Produto[]>([])
+  const [ultimas, setUltimas] = useState<Map<number, number>>(new Map())
+  const [linhas, setLinhas] = useState<Linha[]>([])
+  const [busca, setBusca] = useState('')
+  const [categoria, setCategoria] = useState('')
   const [observacoes, setObservacoes] = useState('')
-  const [erro, setErro] = useState('')
-  const [enviando, setEnviando] = useState(false)
-  const lista = useRef<HTMLOListElement>(null)
   const [colando, setColando] = useState(false)
   const [colado, setColado] = useState('')
-  const [categoriaColada, setCategoriaColada] = useState('')
-  const [avisoColagem, setAvisoColagem] = useState('')
+  const [aviso, setAviso] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
-  function aplicarColagem() {
-    const novos = lerLista(colado).map((x) => ({ ...linhaVazia(categoriaColada), ...x, item: x.item.slice(0, 200) }))
-    if (novos.length === 0) return
-    const preenchidas = linhas.filter((l) => l.item.trim() || l.observacoes.trim())
-    setLinhas([...preenchidas, ...novos])
-    const semQtd = novos.filter((x) => !x.quantidade).length
-    setAvisoColagem(`${novos.length} ${novos.length === 1 ? 'item adicionado' : 'itens adicionados'}. Confira categorias e quantidades`
-      + (semQtd ? ` — ${semQtd} sem quantidade, preencha antes de enviar.` : '.'))
-    setColado('')
-    setColando(false)
-  }
+  const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos])
+
+  const linhaDoProduto = (p: Produto, quantidade?: number): Linha => ({
+    chave: proximaChave++, produto_id: p.id, categoria: p.categoria, item: p.nome,
+    quantidade: String(quantidade ?? ultimas.get(p.id) ?? 1), observacoes: '', ultima: ultimas.get(p.id),
+  })
+  const outroItem = (item = '', quantidade = '1', cat = '', observacoes = ''): Linha =>
+    ({ chave: proximaChave++, produto_id: null, categoria: cat, item, quantidade, observacoes })
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('produtos').select('id, nome, categoria, ativo').eq('ativo', true).order('nome'),
+      supabase.rpc('ultimas_quantidades'),
+      base
+        ? supabase.from('itens').select('produto_id, categoria, item, quantidade, observacoes').eq('solicitacao_id', base).order('id')
+        : Promise.resolve({ data: null, error: null }),
+    ]).then(([p, u, b]) => {
+      setErro(mensagemErro(p.error ?? u.error ?? b.error))
+      const lista = (p.data ?? []) as Produto[]
+      const mapa = new Map(((u.data ?? []) as { produto_id: number; quantidade: number }[]).map((x) => [x.produto_id, x.quantidade]))
+      setProdutos(lista)
+      setUltimas(mapa)
+      // "Repetir pedido": copia os itens da solicitação base; produto desativado vira "outro item".
+      if (b.data) {
+        const ativos = new Set(lista.map((x) => x.id))
+        setLinhas((b.data as Omit<Linha, 'chave'>[]).map((x) => x.produto_id && ativos.has(x.produto_id)
+          ? { chave: proximaChave++, produto_id: x.produto_id, categoria: x.categoria, item: x.item,
+              quantidade: String(x.quantidade), observacoes: x.observacoes ?? '', ultima: mapa.get(x.produto_id) }
+          : outroItem(x.item, String(x.quantidade), x.categoria, x.observacoes ?? '')))
+        setAviso(`Itens copiados da solicitação nº ${base}. Ajuste as quantidades e envie.`)
+      }
+    })
+  }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const naLista = new Set(linhas.map((l) => l.produto_id).filter(Boolean))
+  const termo = normalizar(busca)
+  // Sem busca nem categoria: mostra o que a escola já pediu antes, para pedidos recorrentes.
+  const resultados = (termo || categoria
+    ? produtos.filter((p) => (!categoria || p.categoria === categoria) && normalizar(p.nome).includes(termo))
+    : produtos.filter((p) => ultimas.has(p.id))
+  ).slice(0, MAX_RESULTADOS)
 
   const mudar = (chave: number, campo: keyof Linha, valor: string) =>
     setLinhas(linhas.map((l) => (l.chave === chave ? { ...l, [campo]: valor } : l)))
 
-  function adicionar() {
-    // A nova linha repete a categoria da anterior: as listas costumam vir agrupadas.
-    setLinhas([...linhas, linhaVazia(linhas.at(-1)?.categoria)])
-    requestAnimationFrame(() => lista.current?.querySelector<HTMLInputElement>('li:last-child .campo-item')?.focus())
+  function adicionar(p: Produto) {
+    setLinhas([...linhas, linhaDoProduto(p)])
+    setAviso('')
+  }
+
+  function aplicarColagem() {
+    // Nome igual ao do catálogo (ignorando embalagem, acentos e maiúsculas) vira o produto; o resto, "outro item".
+    const porNome = new Map<string, Produto | null>()
+    for (const p of produtos) {
+      const k = nomeBase(p.nome)
+      porNome.set(k, porNome.has(k) ? null : p) // nome base repetido no catálogo: ambíguo
+      porNome.set(normalizar(p.nome), p)
+    }
+    const novas = lerLista(colado).map((x) => {
+      const p = porNome.get(normalizar(x.item)) ?? porNome.get(nomeBase(x.item))
+      return p ? linhaDoProduto(p, Number(x.quantidade) || undefined) : outroItem(x.item.slice(0, 200), x.quantidade, '', x.observacoes)
+    })
+    setLinhas([...linhas, ...novas])
+    const doCatalogo = novas.filter((l) => l.produto_id).length
+    setAviso(`${novas.length} ${novas.length === 1 ? 'item adicionado' : 'itens adicionados'}: ${doCatalogo} do catálogo`
+      + ` e ${novas.length - doCatalogo} fora do catálogo (escolha a categoria desses). Confira as quantidades.`)
+    setColado('')
+    setColando(false)
   }
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
     setEnviando(true)
     setErro('')
-    // Unidade e status são definidos pelo banco a partir do gestor logado.
+    // Unidade e status são definidos pelo banco; nome e categoria de produto vêm do catálogo.
     const { data, error } = await supabase.rpc('criar_solicitacao', {
       p_observacoes: observacoes.trim() || null,
-      p_itens: linhas.map((l) => ({
-        categoria: l.categoria,
-        item: l.item.trim(),
-        quantidade: Number(l.quantidade),
-        observacoes: l.observacoes.trim() || null,
-      })),
+      p_itens: linhas.map((l) => l.produto_id
+        ? { produto_id: l.produto_id, quantidade: Number(l.quantidade), observacoes: l.observacoes.trim() || null }
+        : { categoria: l.categoria, item: l.item.trim(), quantidade: Number(l.quantidade), observacoes: l.observacoes.trim() || null }),
     })
     setEnviando(false)
     if (error) return setErro(mensagemErro(error))
@@ -63,23 +120,52 @@ export function Nova() {
   return (
     <>
       <div className="cabecalho-pagina"><h1>Nova solicitação</h1></div>
-      <form className="formulario bloco" onSubmit={enviar}>
-        <p className="suave">
-          Inclua todos os itens do pedido. Se o item vem em embalagem, escreva no nome (ex.: “Luva M — caixa”).
+
+      <section className="bloco catalogo-busca" aria-label="Catálogo de produtos">
+        <div className="busca-linha">
+          <label className="busca">
+            Buscar no catálogo
+            <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Ex.: papel, luva, detergente" />
+          </label>
+          <label>
+            Categoria
+            <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+              <option value="">Todas</option>
+              {Object.entries(CATEGORIAS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+            </select>
+          </label>
+        </div>
+        <p className="dica">
+          {termo || categoria
+            ? `${resultados.length === MAX_RESULTADOS ? `Primeiros ${MAX_RESULTADOS}` : resultados.length} produto(s) encontrado(s).`
+            : ultimas.size ? 'Produtos que a escola já pediu antes (a quantidade vem do último pedido):' : 'Busque um produto pelo nome ou escolha uma categoria.'}
         </p>
-        {colando ? (
-          <section className="colar" aria-label="Colar lista">
+        <ul className="resultados">
+          {resultados.map((p) => (
+            <li key={p.id}>
+              <span className="nome-item">{p.nome}</span>
+              <BadgeCategoria categoria={p.categoria} />
+              {ultimas.has(p.id) && <span className="dica">último pedido: {ultimas.get(p.id)}</span>}
+              <button type="button" className="botao secundario" disabled={naLista.has(p.id)} onClick={() => adicionar(p)}>
+                {naLista.has(p.id) ? 'Na lista' : 'Adicionar'}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="acoes">
+          <button type="button" className="botao secundario" onClick={() => { setLinhas([...linhas, outroItem()]); setAviso('') }}>
+            Outro item (fora do catálogo)
+          </button>
+          <button type="button" className="botao secundario" onClick={() => { setColando(!colando); setAviso('') }}>
+            Colar lista
+          </button>
+        </div>
+        {colando && (
+          <div className="colar">
             <label>
               Cole a lista (um item por linha)
-              <textarea rows={8} value={colado} onChange={(e) => setColado(e.target.value)} autoFocus
+              <textarea rows={6} value={colado} onChange={(e) => setColado(e.target.value)} autoFocus
                 placeholder={'20 água sanitária\n4 caixas álcool líquido\nLUVA M   200 CAIXAS'} />
-            </label>
-            <label>
-              Categoria para estes itens (pode ajustar item a item depois)
-              <select value={categoriaColada} onChange={(e) => setCategoriaColada(e.target.value)}>
-                <option value="">Escolher depois</option>
-                {Object.entries(CATEGORIAS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
-              </select>
             </label>
             <div className="acoes">
               <button type="button" className="botao primario" onClick={aplicarColagem} disabled={!colado.trim()}>
@@ -87,51 +173,63 @@ export function Nova() {
               </button>
               <button type="button" className="botao secundario" onClick={() => setColando(false)}>Cancelar</button>
             </div>
-          </section>
-        ) : (
-          <button type="button" className="botao secundario colar-botao" onClick={() => { setColando(true); setAvisoColagem('') }}>
-            Colar lista
-          </button>
+          </div>
         )}
-        {avisoColagem && <p className="aviso" role="status">{avisoColagem}</p>}
-        <ol className="linhas-itens" ref={lista}>
-          {linhas.map((l, i) => (
-            <li key={l.chave}>
-              <fieldset className="linha-item">
-                <legend>Item {i + 1}</legend>
-                <label>
-                  Categoria *
-                  <select required value={l.categoria} onChange={(e) => mudar(l.chave, 'categoria', e.target.value)}>
-                    <option value="" disabled>Selecione</option>
-                    {Object.entries(CATEGORIAS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
-                  </select>
-                </label>
-                <label>
-                  Item *
-                  <input className="campo-item" required maxLength={200} value={l.item}
-                    onChange={(e) => mudar(l.chave, 'item', e.target.value)} placeholder="Ex.: papel sulfite A4 (resma)" />
-                </label>
-                <label className="campo-qtd">
-                  Quantidade *
-                  <input type="number" inputMode="numeric" required min={1} step={1} value={l.quantidade}
-                    onChange={(e) => mudar(l.chave, 'quantidade', e.target.value)} />
-                </label>
-                <label className="campo-obs">
-                  Observações
-                  <input value={l.observacoes} onChange={(e) => mudar(l.chave, 'observacoes', e.target.value)}
-                    placeholder="Modelo, cor, tamanho…" />
-                </label>
-                {linhas.length > 1 && (
+      </section>
+
+      {aviso && <p className="aviso" role="status">{aviso}</p>}
+
+      <form className="formulario bloco" onSubmit={enviar}>
+        <h2>Itens do pedido ({linhas.length})</h2>
+        {linhas.length === 0 && <p className="suave">Nenhum item ainda. Adicione produtos do catálogo acima.</p>}
+        <ol className="linhas-itens">
+          {linhas.map((l, i) => {
+            const p = l.produto_id ? porId.get(l.produto_id) : null
+            return (
+              <li key={l.chave}>
+                <fieldset className="linha-item">
+                  <legend>Item {i + 1}{!l.produto_id && ' · fora do catálogo'}</legend>
+                  {p ? (
+                    <div className="produto-escolhido">
+                      <span className="nome-item">{p.nome}</span>
+                      <BadgeCategoria categoria={p.categoria} />
+                    </div>
+                  ) : (
+                    <>
+                      <label>
+                        Categoria *
+                        <select required value={l.categoria} onChange={(e) => mudar(l.chave, 'categoria', e.target.value)}>
+                          <option value="" disabled>Selecione</option>
+                          {Object.entries(CATEGORIAS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        Item *
+                        <input className="campo-item" required maxLength={200} value={l.item}
+                          onChange={(e) => mudar(l.chave, 'item', e.target.value)} placeholder="Nome e embalagem, ex.: cabo HDMI 3 m" />
+                      </label>
+                    </>
+                  )}
+                  <label className="campo-qtd">
+                    Quantidade *
+                    <input type="number" inputMode="numeric" required min={1} step={1} value={l.quantidade}
+                      onChange={(e) => mudar(l.chave, 'quantidade', e.target.value)} />
+                    {l.ultima !== undefined && <span className="dica">último: {l.ultima}</span>}
+                  </label>
+                  <label className="campo-obs">
+                    Observações
+                    <input value={l.observacoes} onChange={(e) => mudar(l.chave, 'observacoes', e.target.value)}
+                      placeholder="Modelo, cor, tamanho…" />
+                  </label>
                   <button type="button" className="link remover" onClick={() => setLinhas(linhas.filter((x) => x.chave !== l.chave))}
                     aria-label={`Remover item ${i + 1}`}>
                     Remover
                   </button>
-                )}
-              </fieldset>
-            </li>
-          ))}
+                </fieldset>
+              </li>
+            )
+          })}
         </ol>
-        <button type="button" className="botao secundario adicionar" onClick={adicionar}>Adicionar item</button>
         <label>
           Observações gerais do pedido
           <textarea rows={3} value={observacoes} onChange={(e) => setObservacoes(e.target.value)}
@@ -139,7 +237,7 @@ export function Nova() {
         </label>
         <Erro>{erro}</Erro>
         <div className="acoes">
-          <button className="botao primario" disabled={enviando}>
+          <button className="botao primario" disabled={enviando || linhas.length === 0}>
             Enviar solicitação ({linhas.length} {linhas.length === 1 ? 'item' : 'itens'})
           </button>
           <a className="botao secundario" href="#/">Cancelar</a>

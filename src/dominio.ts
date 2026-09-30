@@ -61,8 +61,11 @@ export type ResumoSolicitacao = {
 
 export type Evento = { id: number; status: Status; alterado_por_nome: string; alterado_em: string }
 
+export type Produto = { id: number; nome: string; categoria: Categoria; ativo: boolean }
+
 export type Item = {
   id: number
+  produto_id: number | null
   categoria: Categoria
   item: string
   quantidade: number
@@ -86,8 +89,12 @@ export const dataSimples = (d: string) => d.split('-').reverse().join('/')
 export const normalizar = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
 
-export function mensagemErro(e: { message: string } | null) {
+// Nome sem o que está entre parênteses (a embalagem): "Luva M (caixa)" → "luva m".
+export const nomeBase = (s: string) => normalizar(s.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' '))
+
+export function mensagemErro(e: { message: string; code?: string } | null) {
   if (!e) return ''
+  if (e.code === '23505') return 'Já existe um produto com esse nome.'
   if (/row-level security|permission denied/i.test(e.message)) return 'Você não tem permissão para esta ação.'
   if (/Invalid login credentials/i.test(e.message)) return 'E-mail ou senha incorretos.'
   if (/fetch/i.test(e.message)) return 'Sem conexão com o servidor. Verifique a internet e tente de novo.'
