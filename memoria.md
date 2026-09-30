@@ -57,6 +57,7 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 - 2026-09-28 — Função `vincular_usuario`: parâmetro `nome` conflitava com a coluna `nome` (ambiguidade PL/pgSQL). Pego pelo teste.
 - 2026-09-28 — Falha de rede ao carregar o perfil aparecia como "Conta sem perfil".
 - 2026-09-30 — `wrangler pages project create` criou um **Worker** (`*.workers.dev`) em vez de projeto Pages (o Cloudflare está migrando Pages para Workers). O painel do Cloudflare bloqueia navegador automatizado com captcha. Solução: projeto Pages criado manualmente pelo painel ("Looking to deploy Pages?" no rodapé da tela Create).
+- 2026-09-30 — O wrangler também **alterou o projeto sozinho** (plugin `@cloudflare/vite-plugin` no `vite.config.ts`, deps e scripts no `package.json`, `wrangler.jsonc`, `.wrangler/`) e deixou um processo `workerd` rodando. Entrou por engano num commit; revertido no commit seguinte. **Não usar `wrangler` neste projeto:** o deploy é pelo Pages ligado ao GitHub (push na `main`).
 
 ## Soluções aplicadas
 
@@ -68,6 +69,8 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 ## Riscos conhecidos
 
 - A consulta diária contorna a pausa; o Supabase pode mudar essa política. O backup semanal garante que nenhum dado se perca.
+- Plano grátis do Supabase não tem garantia de disponibilidade (SLA); quedas curtas são possíveis. Se o projeto pausar: painel → Restore (grátis, dados preservados).
+- Se a consulta diária falhar, o GitHub manda e-mail ao dono do repositório — não ignorar.
 
 ## Pendências
 
