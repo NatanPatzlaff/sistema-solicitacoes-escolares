@@ -49,11 +49,14 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 - 2026-09-30 — **Supabase no ar** (projeto `solicitacoes-escolares`, ref `bnyhrrlwouezplvlczhn`, São Paulo, Free): schema aplicado, cadastro público desligado (confirmado: "signup_disabled"), função `criar-conta` publicada, conta **Suporte** (contanatpatz@gmail.com) vinculada como Secretaria. Secrets do GitHub cadastrados; consulta diária e backup rodaram com sucesso (backup de 14 KB).
 - 2026-09-30 — **Teste de ponta a ponta no banco real** (navegador + console + rede): criar gestor pela tela Contas, colar lista, lote "Em análise", compra parcial com justificativa, negativa, aviso ao gestor, confirmação de recebimento. Tentativas de burlar pela API (Secretaria marcar entregue, reduzir sem justificativa, mexer em item final; gestor alterar quantidade, criar conta) todas barradas. Nenhum erro no console. Dados de teste no banco real: "Escola Teste", "Gestor Teste" (gestor.teste@exemplo.com), Solicitação nº 1 — apagar antes do uso real.
 
+- 2026-09-30 — **Site no ar: https://solicitacoes-escolares.pages.dev** (Cloudflare Pages ligado ao GitHub; cada push na `main` publica sozinho). Build `npm run build`, saída `dist`, variáveis `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `NODE_VERSION=22`. Conferido: carrega, fala com o Supabase, sem service_role no bundle, sem erros no console.
+
 ## Problemas encontrados
 
 - Plano gratuito do Supabase pausa o projeto após 7 dias sem uso e não oferece backup baixável.
 - 2026-09-28 — Função `vincular_usuario`: parâmetro `nome` conflitava com a coluna `nome` (ambiguidade PL/pgSQL). Pego pelo teste.
 - 2026-09-28 — Falha de rede ao carregar o perfil aparecia como "Conta sem perfil".
+- 2026-09-30 — `wrangler pages project create` criou um **Worker** (`*.workers.dev`) em vez de projeto Pages (o Cloudflare está migrando Pages para Workers). O painel do Cloudflare bloqueia navegador automatizado com captcha. Solução: projeto Pages criado manualmente pelo painel ("Looking to deploy Pages?" no rodapé da tela Create).
 
 ## Soluções aplicadas
 
@@ -78,6 +81,7 @@ Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dad
 
 ## Próximos passos
 
-1. Publicar o site no Cloudflare Pages e colocar o endereço em Authentication → URL Configuration → Site URL (recuperação de senha).
-2. Apagar os dados de teste do banco real (Escola Teste, Gestor Teste, Solicitação nº 1).
-3. Criar as contas reais das 5 escolas pela tela Contas.
+1. Conferir Site URL/Redirect URLs no Supabase (Authentication → URL Configuration) = https://solicitacoes-escolares.pages.dev.
+2. Criar as contas reais dos gestores das 4 escolas pela tela Contas.
+
+(Dados de teste do banco real apagados em 2026-09-30: sobraram só a conta Suporte e as 4 escolas.)
