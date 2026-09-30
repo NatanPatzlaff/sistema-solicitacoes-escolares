@@ -17,16 +17,17 @@ do $$ begin
 end $$;
 
 insert into unidades (nome) values
-  ('Cinderela'),
-  ('EEICM – Escola de Educação Infantil e Creche Municipal'),
-  ('Grupo Escolar Paulo Freire')
+  ('Pré Escolar Cinderela'),
+  ('Creche Municipal'),
+  ('Grupo Escolar Paulo Freire'),
+  ('Marcolino Pedroso')
 on conflict (nome) do nothing;
 
 create temp table pedidos (codigo text, escola text, observacoes text, criado_em timestamptz, id bigint) on commit drop;
 insert into pedidos values
-  ('E1', 'EEICM – Escola de Educação Infantil e Creche Municipal', 'Pedido de material pedagógico — setembro de 2026.', '2026-09-03 14:00-03', null),
-  ('E2', 'EEICM – Escola de Educação Infantil e Creche Municipal', 'Pedidos gerais de cozinha e limpeza.', '2026-09-03 14:20-03', null),
-  ('C',  'Cinderela', null, '2026-09-22 09:15-03', null),
+  ('E1', 'Creche Municipal', 'Pedido de material pedagógico — setembro de 2026.', '2026-09-03 14:00-03', null),
+  ('E2', 'Creche Municipal', 'Pedidos gerais de cozinha e limpeza.', '2026-09-03 14:20-03', null),
+  ('C',  'Pré Escolar Cinderela', null, '2026-09-22 09:15-03', null),
   ('G',  'Grupo Escolar Paulo Freire', 'Lista de materiais para 2027.', '2026-09-26 10:30-03', null);
 
 with criadas as (

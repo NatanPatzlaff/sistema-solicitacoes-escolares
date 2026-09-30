@@ -160,7 +160,7 @@ Não trocar sem autorização (ver CLAUDE.md).
 - Listagens paginadas no servidor; filtros executados no banco.
 - Primeira carga útil em até ~2,5 s em conexão 4G comum.
 - Listagem filtrada da Secretaria responde em até ~1 s com o volume esperado.
-- Volume esperado: **5 unidades escolares** (cidade pequena), lançamentos manuais e esporádicos. Nº de gestores por unidade: **(a confirmar)**.
+- Volume esperado: **4 unidades escolares** (cidade pequena): Grupo Escolar Paulo Freire, Creche Municipal, Pré Escolar Cinderela e Marcolino Pedroso — cadastradas no banco em 2026-09-30, lançamentos manuais e esporádicos. Nº de gestores por unidade: **(a confirmar)**.
 
 ## 11. Escopo
 

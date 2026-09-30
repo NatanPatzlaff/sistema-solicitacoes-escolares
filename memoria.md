@@ -10,7 +10,8 @@
 - 2026-09-24 — Stack: React + Vite + TypeScript (estático) · Supabase gratuito (Postgres, Auth, RLS) · Cloudflare Pages · GitHub privado.
 - 2026-09-24 — Anti-pausa do Supabase: consulta diária via GitHub Actions. Backup semanal (`pg_dump`) via GitHub Actions, como artefato privado.
 - 2026-09-24 — Repositório **privado**: backup não pode ser público, e em repositório público o GitHub desativa tarefas agendadas após 60 dias sem commits.
-- 2026-09-24 — Escala: 5 unidades escolares; lançamentos manuais e esporádicos (por isso o risco real de 7 dias sem uso).
+- 2026-09-24 — Escala: lançamentos manuais e esporádicos (por isso o risco real de 7 dias sem uso).
+- 2026-09-30 — **Escolas (4):** Grupo Escolar Paulo Freire, Creche Municipal, Pré Escolar Cinderela, Marcolino Pedroso. Cadastradas no banco real. No seed, a lista "EEICM" virou Creche Municipal (o PDF é da "Escola de Educação Infantil e Creche Municipal"). Antes se falava em 5 escolas.
 - 2026-09-30 — **Fluxo real:** gestor pede → Secretaria compra manualmente no **SimCatarina** (fora do sistema) → registra o resultado. Pode alterar quantidade ou negar, sempre com justificativa. "Aprovar" = marcar *Adquirida*; não há status novo.
 - 2026-09-30 — **Solicitação com vários itens.** Status por item; a solicitação só mostra resumo. A Secretaria atua item a item ou em lote (todos/selecionados), tudo ou nada. Justificativa obrigatória também quando a quantidade comprada ≠ pedida.
 - 2026-09-30 — Categorias novas: **Cozinha e utensílios** e **Mobiliário e equipamentos** (7 no total).
