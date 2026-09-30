@@ -19,9 +19,14 @@ const SO_NUMERO_NO_FIM = /^(.+?)[\s:–-]+(\d+)$/
 
 const ehUnidade = (m: string) => new RegExp(`^${UNIDADE}\\.?$`, 'i').test(m)
 
-// Listas em CAIXA ALTA viram "Primeira maiúscula".
+// Listas em CAIXA ALTA viram "Primeira maiúscula", mantendo tamanhos e siglas
+// (M, G, AA, AAA, A4, GI-10): letra isolada, letra repetida ou palavra com número.
+const manterMaiuscula = (p: string) =>
+  /\d/.test(p) || (p.length === 1 && !/^[AEOÀÉ]$/.test(p)) || /^(\p{Lu})\1{1,2}$/u.test(p)
+
 function capitalizar(s: string) {
-  const texto = /\p{Ll}/u.test(s) ? s : s.toLowerCase()
+  const texto = /\p{Ll}/u.test(s) ? s
+    : s.split(' ').map((p) => (manterMaiuscula(p) ? p : p.toLowerCase())).join(' ')
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 

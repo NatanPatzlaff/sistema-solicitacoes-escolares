@@ -12,7 +12,10 @@ Deno.test('quantidade no início (lista manuscrita da Cinderela)', () => {
 })
 
 Deno.test('quantidade no fim (tabelas em PDF)', () => {
-  assert.deepEqual(um('LUVA M\t200 CAIXAS'), { item: 'Luva m', quantidade: '200', observacoes: '200 caixas' })
+  assert.deepEqual(um('LUVA M\t200 CAIXAS'), { item: 'Luva M', quantidade: '200', observacoes: '200 caixas' })
+  assert.deepEqual(um('PILHA ALCALINA AAA 20 CAIXAS COM 10'), { item: 'Pilha alcalina AAA', quantidade: '20', observacoes: '20 caixas com 10' })
+  assert.deepEqual(um('FOLHA A4 120 50 PAC.'), { item: 'Folha A4 120', quantidade: '50', observacoes: '50 pac.' })
+  assert.deepEqual(um('CANETA PRETA E AZUL 2'), { item: 'Caneta preta e azul', quantidade: '2', observacoes: '' })
   assert.deepEqual(um('ÁGUA SANITÁRIA 5 LITROS 100 UNIDADES'), { item: 'Água sanitária 5 litros', quantidade: '100', observacoes: '' })
   assert.deepEqual(um('ÁLCOOL LÍQUIDO 70 30 CAIXAS COM 12 UNIDADES'),
     { item: 'Álcool líquido 70', quantidade: '30', observacoes: '30 caixas com 12 unidades' })
