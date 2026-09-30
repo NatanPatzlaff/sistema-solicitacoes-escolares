@@ -74,6 +74,6 @@ Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dad
 ## Próximos passos
 
 1. Criar o projeto no Supabase (gratuito), rodar `supabase/schema.sql`, publicar a função `criar-conta` e criar a primeira conta da Secretaria (passo a passo no README.md).
-2. Criar os workflows de anti-pausa e backup (precisam das chaves do Supabase).
+2. Cadastrar os secrets do GitHub (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_DB_URL`). Workflows já criados em 2026-09-30 e testados sem secrets (pulam sem erro).
 3. Conectar o repositório ao Cloudflare Pages.
-4. Testar o fluxo completo com dados reais e responder às pendências.
+4. Testar o fluxo completo contra o Supabase real (a Edge Function nunca rodou de verdade) e responder às pendências.
