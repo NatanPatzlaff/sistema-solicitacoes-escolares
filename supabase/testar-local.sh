@@ -33,6 +33,7 @@ alter default privileges in schema public grant all on tables to anon, authentic
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 \ir schema.sql
 \ir migracoes/001-catalogo.sql
+\ir migracoes/002-escolas.sql
 \ir catalogo.sql
 \ir seed.sql
 \ir verificar-seed.sql

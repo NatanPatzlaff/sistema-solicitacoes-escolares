@@ -1,5 +1,5 @@
 -- Catálogo inicial de produtos, montado a partir das listas enviadas pelas escolas
--- (Pré Escolar Cinderela, Creche Municipal, Grupo Escolar Paulo Freire). Rodar depois das migrações.
+-- (Pré-Escolar Cinderela, Escola de Educação Infantil e Creche Municipal, Grupo Escolar Paulo Freire). Rodar depois das migrações.
 -- A Secretaria mantém o catálogo pela tela "Catálogo" do sistema.
 
 insert into produtos (nome, categoria) values

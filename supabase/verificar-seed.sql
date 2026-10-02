@@ -6,7 +6,7 @@ from itens i join solicitacoes s on s.id = i.solicitacao_id join unidades u on u
 group by 1, 2, 3 order by 1, 3;
 
 do $$
-declare cinderela bigint := (select id from unidades where nome = 'Pré Escolar Cinderela');
+declare cinderela bigint := (select id from unidades where nome = 'Pré-Escolar Cinderela');
 begin
   assert (select count(*) from solicitacoes) = 4, '4 solicitações (uma por lista)';
   assert (select count(*) from itens) = 301, 'todos os 301 itens ligados a um produto do catálogo';
@@ -35,7 +35,7 @@ begin
 
   -- Um gestor da Cinderela, com o seed carregado, continua vendo só a própria escola.
   insert into auth.users values ('00000000-0000-0000-0000-0000000000c1', 'gestor@cinderela.teste');
-  perform vincular_usuario('gestor@cinderela.teste', 'Gestor Cinderela', 'gestor', 'Pré Escolar Cinderela');
+  perform vincular_usuario('gestor@cinderela.teste', 'Gestor Cinderela', 'gestor', 'Pré-Escolar Cinderela');
   set local role authenticated;
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000c1', true);
   assert (select count(*) from itens where unidade_id <> cinderela) = 0, 'gestor vê outra escola';

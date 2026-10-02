@@ -11,7 +11,8 @@
 - 2026-09-24 — Anti-pausa do Supabase: consulta diária via GitHub Actions. Backup semanal (`pg_dump`) via GitHub Actions, como artefato privado.
 - 2026-09-24 — Repositório **privado**: backup não pode ser público, e em repositório público o GitHub desativa tarefas agendadas após 60 dias sem commits.
 - 2026-09-24 — Escala: lançamentos manuais e esporádicos (por isso o risco real de 7 dias sem uso).
-- 2026-09-30 — **Escolas (4):** Grupo Escolar Paulo Freire, Creche Municipal, Pré Escolar Cinderela, Marcolino Pedroso. Cadastradas no banco real. No seed, a lista "EEICM" virou Creche Municipal (o PDF é da "Escola de Educação Infantil e Creche Municipal"). Antes se falava em 5 escolas.
+- 2026-10-02 — **Unidades (6), lista correta** (substitui a de 4): Grupo Escolar Paulo Freire, Núcleo Educacional Municipal Nova Estrela, Pré-Escolar Cinderela, Escola de Educação Infantil e Creche Municipal, Centro Educacional Esportivo e Cultural, **Secretaria de Educação**. Marcolino Pedroso removida. A Secretaria de Educação faz pedidos para si mesma como unidade comum: quem pede usa uma **conta de gestor** ligada a ela, separada da conta Secretaria que atende. Migração `supabase/migracoes/002-escolas.sql` (renomeia mantendo IDs) — **aplicada no banco real em 2026-10-02** (SQL Editor, sucesso).
+- 2026-09-30 — ~~**Escolas (4):**~~ (substituída em 2026-10-02) Grupo Escolar Paulo Freire, Creche Municipal, Pré Escolar Cinderela, Marcolino Pedroso. Cadastradas no banco real. No seed, a lista "EEICM" virou Creche Municipal (o PDF é da "Escola de Educação Infantil e Creche Municipal"). Antes se falava em 5 escolas.
 - 2026-09-30 — **Fluxo real:** gestor pede → Secretaria compra manualmente no **SimCatarina** (fora do sistema) → registra o resultado. Pode alterar quantidade ou negar, sempre com justificativa. "Aprovar" = marcar *Adquirida*; não há status novo.
 - 2026-09-30 — **Solicitação com vários itens.** Status por item; a solicitação só mostra resumo. A Secretaria atua item a item ou em lote (todos/selecionados), tudo ou nada. Justificativa obrigatória também quando a quantidade comprada ≠ pedida.
 - 2026-09-30 — **Catálogo de produtos** substitui o item em texto livre (decisão anterior substituída com autorização). Escola escolhe produtos do catálogo; quantidade vem do **último pedido da escola** para o produto (editável); pode **repetir um pedido anterior** ("Repetir este pedido" no detalhe); pode pedir **"outro item"** fora do catálogo. **Só a Secretaria** mantém o catálogo (tela Catálogo: novo, editar, desativar, incluir itens pedidos fora do catálogo com um clique). Catálogo inicial: 297 produtos tirados das listas das escolas (`supabase/catalogo.sql`), embalagem no nome.
@@ -87,12 +88,12 @@ Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dad
 ## Próximos passos
 
 1. **Implementar "Excluir conta"** (decisão aprovada em 2026-09-30), plano combinado:
-   - Migração `supabase/migracoes/002-excluir-conta.sql`: FKs `solicitacoes.criado_por` e `historico.alterado_por` → `on delete set null` (pedidos e histórico ficam; nome já está em `alterado_por_nome`).
+   - Migração `supabase/migracoes/003-excluir-conta.sql`: FKs `solicitacoes.criado_por` e `historico.alterado_por` → `on delete set null` (pedidos e histórico ficam; nome já está em `alterado_por_nome`).
    - Edge Function `excluir-conta` (só Secretaria; usa service_role no servidor): bloqueia excluir a **própria conta** e a **última conta da Secretaria**; regra pura testada com `deno test`.
    - Botão "Excluir" em cada linha da tela Contas (exceto a própria), com confirmação.
    - Teste no `teste.sql`: excluir gestor com pedidos mantém os pedidos e o nome no histórico. Aplicar migração no banco real e publicar a função (`npx supabase functions deploy excluir-conta --project-ref bnyhrrlwouezplvlczhn --use-api`).
 2. Teste de ponta a ponta do catálogo com contas reais no site publicado.
-3. Criar as contas reais dos gestores das 4 escolas pela tela Contas.
+3. Criar as contas reais dos gestores das 6 unidades pela tela Contas.
 4. Apagar o Worker `solicitacoes-escolares` (workers.dev) criado por engano pelo wrangler — aguardando autorização.
 
 (2026-09-30: conta de teste "Creche" <aaaaaa@gmail.com> apagada do banco real; sobra só a conta Suporte.)

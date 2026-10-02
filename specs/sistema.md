@@ -165,7 +165,7 @@ Não trocar sem autorização (ver CLAUDE.md).
 - Listagens paginadas no servidor; filtros executados no banco.
 - Primeira carga útil em até ~2,5 s em conexão 4G comum.
 - Listagem filtrada da Secretaria responde em até ~1 s com o volume esperado.
-- Volume esperado: **4 unidades escolares** (cidade pequena): Grupo Escolar Paulo Freire, Creche Municipal, Pré Escolar Cinderela e Marcolino Pedroso — cadastradas no banco em 2026-09-30, lançamentos manuais e esporádicos. Nº de gestores por unidade: **(a confirmar)**.
+- Volume esperado: **6 unidades** (cidade pequena): Grupo Escolar Paulo Freire, Núcleo Educacional Municipal Nova Estrela, Pré-Escolar Cinderela, Escola de Educação Infantil e Creche Municipal, Centro Educacional Esportivo e Cultural e Secretaria de Educação (que também faz pedidos para si mesma, como uma unidade comum, com conta de gestor) — lista corrigida em 2026-10-02, lançamentos manuais e esporádicos. Nº de gestores por unidade: **(a confirmar)**.
 
 ## 11. Escopo
 
