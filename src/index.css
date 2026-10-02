@@ -394,6 +394,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offs
 }
 .resultados li:first-child, .avulsos li:first-child { border-top: 0; }
 .resultados .nome-item, .avulsos .nome-item { flex: 1 1 200px; }
+.produto-botao {
+  background: none; border: 0; padding: 8px 0; min-height: 44px; text-align: left;
+  font: inherit; font-weight: 500; color: var(--texto); cursor: pointer;
+}
+.produto-botao:hover { text-decoration: underline; }
+.qtd-rapida { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-suave); }
+.qtd-rapida input { width: 88px; }
 .produto-escolhido { grid-column: span 2; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; align-self: center; }
 @media (max-width: 600px) {
   .produto-escolhido { grid-column: 1 / -1; }

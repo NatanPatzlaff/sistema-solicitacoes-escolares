@@ -30,6 +30,7 @@ export function Nova({ params }: { params: URLSearchParams }) {
   const [aviso, setAviso] = useState('')
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [focar, setFocar] = useState<number | null>(null)
 
   const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos])
 
@@ -65,7 +66,7 @@ export function Nova({ params }: { params: URLSearchParams }) {
     })
   }, [base]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const naLista = new Set(linhas.map((l) => l.produto_id).filter(Boolean))
+  const naLista = new Map(linhas.filter((l) => l.produto_id).map((l) => [l.produto_id, l]))
   const termo = normalizar(busca)
   // Sem busca nem categoria: mostra o que a escola já pediu antes, para pedidos recorrentes.
   const resultados = (termo || categoria
@@ -77,7 +78,9 @@ export function Nova({ params }: { params: URLSearchParams }) {
     setLinhas(linhas.map((l) => (l.chave === chave ? { ...l, [campo]: valor } : l)))
 
   function adicionar(p: Produto) {
-    setLinhas([...linhas, linhaDoProduto(p)])
+    const nova = linhaDoProduto(p)
+    setLinhas([...linhas, nova])
+    setFocar(nova.chave) // cursor vai para a quantidade, ali mesmo na busca
     setAviso('')
   }
 
@@ -141,16 +144,29 @@ export function Nova({ params }: { params: URLSearchParams }) {
             : ultimas.size ? 'Produtos que a escola já pediu antes (a quantidade vem do último pedido):' : 'Busque um produto pelo nome ou escolha uma categoria.'}
         </p>
         <ul className="resultados">
-          {resultados.map((p) => (
-            <li key={p.id}>
-              <span className="nome-item">{p.nome}</span>
-              <BadgeCategoria categoria={p.categoria} />
-              {ultimas.has(p.id) && <span className="dica">último pedido: {ultimas.get(p.id)}</span>}
-              <button type="button" className="botao secundario" disabled={naLista.has(p.id)} onClick={() => adicionar(p)}>
-                {naLista.has(p.id) ? 'Na lista' : 'Adicionar'}
-              </button>
-            </li>
-          ))}
+          {resultados.map((p) => {
+            const l = naLista.get(p.id)
+            return (
+              <li key={p.id}>
+                {l ? <span className="nome-item">{p.nome}</span> : (
+                  <button type="button" className="nome-item produto-botao" onClick={() => adicionar(p)}>{p.nome}</button>
+                )}
+                <BadgeCategoria categoria={p.categoria} />
+                {ultimas.has(p.id) && <span className="dica">último pedido: {ultimas.get(p.id)}</span>}
+                {l ? (
+                  // Já na lista: a quantidade é editada aqui mesmo, sem descer até os itens do pedido.
+                  <label className="qtd-rapida">
+                    Quantidade
+                    <input type="number" inputMode="numeric" required min={1} step={1} value={l.quantidade}
+                      autoFocus={l.chave === focar} onFocus={(e) => e.target.select()}
+                      onChange={(e) => mudar(l.chave, 'quantidade', e.target.value)} />
+                  </label>
+                ) : (
+                  <button type="button" className="botao secundario" onClick={() => adicionar(p)}>Adicionar</button>
+                )}
+              </li>
+            )
+          })}
         </ul>
         <div className="acoes">
           <button type="button" className="botao secundario" onClick={() => { setLinhas([...linhas, outroItem()]); setAviso('') }}>
