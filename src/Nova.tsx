@@ -158,7 +158,9 @@ export function Nova({ params }: { params: URLSearchParams }) {
                   <label className="qtd-rapida">
                     Quantidade
                     <input type="number" inputMode="numeric" required min={1} step={1} value={l.quantidade}
-                      autoFocus={l.chave === focar} onFocus={(e) => e.target.select()}
+                      // Foca e seleciona a quantidade sugerida: o que for digitado substitui (não vira "2035").
+                      ref={(el) => { if (el && l.chave === focar) { el.focus(); el.select(); setFocar(null) } }}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => mudar(l.chave, 'quantidade', e.target.value)} />
                   </label>
                 ) : (

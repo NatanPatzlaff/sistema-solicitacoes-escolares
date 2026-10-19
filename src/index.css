@@ -63,7 +63,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 1200px) { .botao { min-height: 40px; } }
 
 /* ---------- Formulários */
-.formulario { display: grid; gap: 16px; }
+/* minmax(0, 1fr): opções longas no select (nomes de unidades) não alargam o formulário além do cartão */
+.formulario { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+select { max-width: 100%; text-overflow: ellipsis; }
+.formulario select, .bloco select { width: 100%; min-width: 0; }
 .formulario label, .filtros label { display: grid; gap: 4px; font-size: 14px; color: var(--texto-suave); }
 input, select, textarea {
   min-height: 44px; padding: 8px 12px; border: 1px solid var(--borda); border-radius: 4px;
@@ -268,9 +271,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offs
 .bloco {
   background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px;
   padding: 16px 24px 24px; display: grid; gap: 12px; align-content: start;
+  grid-template-columns: minmax(0, 1fr);
 }
 .estreito { max-width: 560px; }
-.lado-a-lado { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.lado-a-lado { grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); }
 .campos { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
 .campos dt { color: var(--texto-suave); }
 .campos dd { margin: 0; overflow-wrap: anywhere; }
