@@ -17,6 +17,9 @@
 - 2026-09-30 — **Solicitação com vários itens.** Status por item; a solicitação só mostra resumo. A Secretaria atua item a item ou em lote (todos/selecionados), tudo ou nada. Justificativa obrigatória também quando a quantidade comprada ≠ pedida.
 - 2026-09-30 — **Catálogo de produtos** substitui o item em texto livre (decisão anterior substituída com autorização). Escola escolhe produtos do catálogo; quantidade vem do **último pedido da escola** para o produto (editável); pode **repetir um pedido anterior** ("Repetir este pedido" no detalhe); pode pedir **"outro item"** fora do catálogo. **Só a Secretaria** mantém o catálogo (tela Catálogo: novo, editar, desativar, incluir itens pedidos fora do catálogo com um clique). Catálogo inicial: 297 produtos tirados das listas das escolas (`supabase/catalogo.sql`), embalagem no nome.
 - 2026-09-30 — **Excluir contas pela tela Contas** (substitui "editar/desativar/excluir fora da primeira versão"). Conta com pedidos: **excluir e manter os pedidos** — a pessoa perde o acesso, pedidos da escola continuam, histórico mantém o nome de quem fez. **Ainda não implementado** — ver Próximos passos.
+- 2026-10-19 — **Site e banco vão para o servidor da prefeitura** (substitui Cloudflare Pages + Supabase na nuvem, aprovado pelo usuário). Implica Supabase self-hosted (Docker) ou equivalente no servidor do TI, migrar dados/contas/função `criar-conta`, e rever consulta diária/backup (deixam de fazer sentido como estão). **Não iniciado** — falta levantar com o TI: sistema operacional, Docker disponível, domínio/HTTPS, quem mantém e faz backup.
+- 2026-10-19 — **Listas de 2027** (`Listas/`): incluir os produtos novos no catálogo, sem repetir os existentes. Não registrar como solicitações. **Não iniciado.**
+- 2026-10-19 — **Controle de estoque entra agora** (substitui "estoque fora da primeira versão", §11). Contagens em `Listas/`: Contagem_de_Estoque_PEC (Cinderela), ESTOQUE DEPÓSITO - CEEC, ESTOQUE - NEMNE.xlsx, ESTOQUE CRECHE (título interno "ESTOQUE SECRETARIA" — confirmar de quem é). **Não iniciado** — antes, levantar com o usuário como usariam (quem lança, entrada/saída, ligação com pedidos e catálogo).
 - 2026-09-30 — Categorias novas: **Cozinha e utensílios** e **Mobiliário e equipamentos** (7 no total).
 - 2026-09-30 — **Quem confirma "Entregue" é o gestor** (recebimento na escola). A Secretaria não marca mais "Entregue"; o gestor não muda nenhum outro campo. A confirmação da escola não gera aviso para ela mesma.
 - 2026-09-30 — **Colar lista** no cadastro do gestor (parser em `src/colarLista.ts`, testado com `deno test src/colarLista.test.ts`).
@@ -63,6 +66,9 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 - 2026-09-30 — `wrangler pages project create` criou um **Worker** (`*.workers.dev`) em vez de projeto Pages (o Cloudflare está migrando Pages para Workers). O painel do Cloudflare bloqueia navegador automatizado com captcha. Solução: projeto Pages criado manualmente pelo painel ("Looking to deploy Pages?" no rodapé da tela Create).
 - 2026-09-30 — O wrangler também **alterou o projeto sozinho** (plugin `@cloudflare/vite-plugin` no `vite.config.ts`, deps e scripts no `package.json`, `wrangler.jsonc`, `.wrangler/`) e deixou um processo `workerd` rodando. Entrou por engano num commit; revertido no commit seguinte. **Não usar `wrangler` neste projeto:** o deploy é pelo Pages ligado ao GitHub (push na `main`).
 
+- 2026-10-19 — **Supabase ficou fora do ar de 08/10 até ~19/10** (domínio deixou de existir = projeto pausado; usuário restaurou). A **consulta diária rodou até 07/10 e mesmo assim o projeto pausou**: a consulta via API anônima não conta como uso para o Supabase. Desde 08/10 ela falha todo dia (GitHub mandou e-mails).
+- 2026-10-19 — **Backups de 11/10 e 18/10 vazios (174 bytes) marcados como sucesso**: o `pg_dump` falhou, mas o `| gzip` gerou arquivo e o `test -s` passou. Falta `set -o pipefail` e checar o conteúdo. **Último backup bom: 04/10 (22 KB).** Não corrigido ainda.
+
 ## Soluções aplicadas
 
 - Consulta diária + backup semanal via GitHub Actions (a implementar quando o projeto Supabase existir).
@@ -89,6 +95,12 @@ Levantadas pelas listas reais das escolas (2026-09-30) — mudam o modelo de dad
 
 ## Próximos passos
 
+0. **Pendências de 2026-10-19** (antes de usar de verdade):
+   - Corrigir o backup (pipefail + checar conteúdo) — e decidir nova forma de manter ativo, ou nenhuma, já que vai para servidor próprio.
+   - **"Selecionar todos" (aguardando resposta do usuário):** "Em análise" é etapa real (fica assim até a Secretaria comprar no SimCatarina). Proposta: o checkbox do topo/"Todos em aberto" oferece todos os status possíveis entre os marcados e aplica só aos itens que podem ir para ele, avisando "aplicado a 12 de 15 itens". Hoje, com seleção mista, o painel fica sem opções.
+   - Levantamento com o TI para a migração ao servidor da prefeitura.
+   - Listas 2027 → catálogo.
+   - Levantamento do controle de estoque.
 1. **Implementar "Excluir conta"** (decisão aprovada em 2026-09-30), plano combinado:
    - Migração `supabase/migracoes/003-excluir-conta.sql`: FKs `solicitacoes.criado_por` e `historico.alterado_por` → `on delete set null` (pedidos e histórico ficam; nome já está em `alterado_por_nome`).
    - Edge Function `excluir-conta` (só Secretaria; usa service_role no servidor): bloqueia excluir a **própria conta** e a **última conta da Secretaria**; regra pura testada com `deno test`.

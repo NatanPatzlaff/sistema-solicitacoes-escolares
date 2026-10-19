@@ -131,6 +131,8 @@ O gestor tem os mesmos filtros, **exceto escola**, restritos à própria unidade
 
 ## 9. Stack técnica (aprovada em 2026-09-24)
 
+> **Mudança aprovada em 2026-10-19:** site e banco vão para o **servidor da prefeitura** (no lugar de Cloudflare Pages + Supabase na nuvem). Ainda não iniciada; detalhes a definir com o TI (ver memoria.md). Até lá, vale o descrito abaixo.
+
 **Restrição: custo zero.** Nenhum serviço pago, nem domínio próprio.
 
 - **Interface:** React + Vite + TypeScript, site estático (sem servidor próprio).
@@ -180,7 +182,8 @@ Não trocar sem autorização (ver CLAUDE.md).
 ### Fora (primeira versão)
 - Relatórios, gráficos e exportação (PDF/planilha) — exceto a Lista de compras (§2), aprovada em 2026-09-30
 - Notificação por e-mail/WhatsApp
-- Controle de estoque, compras, licitações ou orçamento
+- Compras, licitações ou orçamento
+- ~~Controle de estoque~~ — **entra no escopo** (aprovado em 2026-10-19); funcionamento a definir (ver memoria.md)
 - Anexos/fotos nas solicitações **(avaliar depois — útil para manutenção)**
 - Aplicativo nativo
 
