@@ -72,6 +72,8 @@ Já implementadas assim na primeira versão (2026-09-28); mudar é simples se fo
 
 ## Riscos conhecidos
 
+- **2026-10-19 — Repositório PÚBLICO temporariamente** (pedido do usuário, para o TI levar ao servidor). Substitui temporariamente a decisão "repositório privado". Enquanto público, ficam acessíveis a qualquer conta do GitHub: os **backups do banco** (artefatos do Actions, com contas e pedidos), as listas das escolas (`Listas/`, `referencias/`) e o e-mail em `memoria.md`. Usuário avisado e optou por manter assim. **Voltar para privado assim que o TI terminar** (`gh repo edit NatanPatzlaff/sistema-solicitacoes-escolares --visibility private --accept-visibility-change-consequences`); se passar de ~60 dias sem commits público, o GitHub desliga as tarefas agendadas (consulta diária e backup).
+
 - A consulta diária contorna a pausa; o Supabase pode mudar essa política. O backup semanal garante que nenhum dado se perca.
 - Plano grátis do Supabase não tem garantia de disponibilidade (SLA); quedas curtas são possíveis. Se o projeto pausar: painel → Restore (grátis, dados preservados).
 - Se a consulta diária falhar, o GitHub manda e-mail ao dono do repositório — não ignorar.
